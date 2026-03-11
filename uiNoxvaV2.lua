@@ -1,8 +1,10 @@
 -- ==========================================
--- NOXVA UI ENGINE | CORE LIBRARY
+-- NOXVA UI ENGINE | FINAL PREMIUM BUILD V2.3
+-- CORE LIBRARY (DO NOT EXECUTE DIRECTLY)
 -- ==========================================
 local NoxvaLib = {}
-NoxvaLib.Flags = {} -- Tempat nyimpen data Config
+NoxvaLib.Flags = {} 
+NoxvaLib.AntiAFKLoaded = false
 
 function NoxvaLib:CreateWindow()
     local CoreGui = game:GetService("CoreGui")
@@ -11,6 +13,7 @@ function NoxvaLib:CreateWindow()
     local StatsService = game:GetService("Stats")
     local TweenService = game:GetService("TweenService")
     local HttpService = game:GetService("HttpService")
+    local Players = game:GetService("Players")
 
     if gethui then
         if gethui():FindFirstChild("NoxvaHub_Pure") then gethui().NoxvaHub_Pure:Destroy() end
@@ -147,15 +150,9 @@ function NoxvaLib:CreateWindow()
     LogoClicker.MouseButton1Click:Connect(function() MainFrame.Visible = true; OpenLogo.Visible = false end)
 
     local function AddRipple(button)
-        button.MouseButton1Down:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0.5}):Play()
-        end)
-        button.MouseButton1Up:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play()
-        end)
-        button.MouseLeave:Connect(function()
-            TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play()
-        end)
+        button.MouseButton1Down:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0.5}):Play() end)
+        button.MouseButton1Up:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end)
+        button.MouseLeave:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end)
     end
 
     local function MakeDraggable(UIElement, DragHandle)
@@ -176,8 +173,7 @@ function NoxvaLib:CreateWindow()
             end
         end)
     end
-    MakeDraggable(MainFrame, TopBar)
-    MakeDraggable(OpenLogo, LogoClicker)
+    MakeDraggable(MainFrame, TopBar); MakeDraggable(OpenLogo, LogoClicker)
 
     local Sidebar = Instance.new("Frame", MainFrame)
     Sidebar.Size = UDim2.new(0, 130, 1, -40); Sidebar.Position = UDim2.new(0, 0, 0, 40)
@@ -192,6 +188,17 @@ function NoxvaLib:CreateWindow()
 
     local WindowFunctions = {}
     local FirstTab = true
+
+    function WindowFunctions:EnableAntiAFK()
+        if NoxvaLib.AntiAFKLoaded then return end
+        NoxvaLib.AntiAFKLoaded = true
+        local VirtualUser = game:GetService("VirtualUser")
+        Players.LocalPlayer.Idled:Connect(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.new())
+        end)
+        self:Notify("SYSTEM", "Anti-AFK Aktif! Lu aman dari kick 20 menit.", 3)
+    end
 
     function WindowFunctions:Notify(Title, Text, Duration)
         local NotifFrame = Instance.new("Frame", NotifContainer)
@@ -250,77 +257,82 @@ function NoxvaLib:CreateWindow()
         end)
 
         local TabFunctions = {}
+        local SearchableElements = {}
+
+        function TabFunctions:AddSearchBar()
+            local SearchFrame = Instance.new("Frame", TabPage)
+            SearchFrame.Size = UDim2.new(1, 0, 0, 35)
+            SearchFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25); SearchFrame.BackgroundTransparency = 0.2
+            Instance.new("UICorner", SearchFrame).CornerRadius = UDim.new(0, 5)
+            local SearchStroke = Instance.new("UIStroke", SearchFrame)
+            SearchStroke.Color = Color3.fromRGB(0, 120, 255); SearchStroke.Thickness = 1; SearchStroke.Transparency = 0.5
+            local SearchBox = Instance.new("TextBox", SearchFrame)
+            SearchBox.Size = UDim2.new(1, -30, 1, 0); SearchBox.Position = UDim2.new(0, 15, 0, 0)
+            SearchBox.BackgroundTransparency = 1; SearchBox.PlaceholderText = "🔍 Cari fitur di sini..."
+            SearchBox.Text = ""; SearchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+            SearchBox.Font = Enum.Font.Gotham; SearchBox.TextSize = 12; SearchBox.TextXAlignment = Enum.TextXAlignment.Left
+
+            SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+                local searchText = SearchBox.Text:lower()
+                for _, element in ipairs(SearchableElements) do
+                    if searchText == "" or string.find(element.Name, searchText) then
+                        element.Frame.Visible = true
+                    else
+                        element.Frame.Visible = false
+                    end
+                end
+            end)
+        end
 
         function TabFunctions:AddLabel(TextContent)
             local LblFrame = Instance.new("Frame", TabPage)
             LblFrame.Size = UDim2.new(1, 0, 0, 0); LblFrame.AutomaticSize = Enum.AutomaticSize.Y
             LblFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25); LblFrame.BackgroundTransparency = 0.2
             Instance.new("UICorner", LblFrame).CornerRadius = UDim.new(0, 5)
-
             local LblText = Instance.new("TextLabel", LblFrame)
             LblText.Size = UDim2.new(1, 0, 0, 0); LblText.AutomaticSize = Enum.AutomaticSize.Y
             LblText.BackgroundTransparency = 1; LblText.Text = TextContent
             LblText.TextColor3 = Color3.fromRGB(220, 220, 220); LblText.Font = Enum.Font.GothamSemibold
-            LblText.TextSize = 12; LblText.TextWrapped = true
-            LblText.TextXAlignment = Enum.TextXAlignment.Left; LblText.TextYAlignment = Enum.TextYAlignment.Top
+            LblText.TextSize = 12; LblText.TextWrapped = true; LblText.TextXAlignment = Enum.TextXAlignment.Left; LblText.TextYAlignment = Enum.TextYAlignment.Top
             local Pad = Instance.new("UIPadding", LblText)
             Pad.PaddingLeft = UDim.new(0, 15); Pad.PaddingRight = UDim.new(0, 15); Pad.PaddingTop = UDim.new(0, 10); Pad.PaddingBottom = UDim.new(0, 10)
             
+            table.insert(SearchableElements, {Frame = LblFrame, Name = TextContent:lower()})
             local LabelItem = {}
-            function LabelItem:SetText(newText) LblText.Text = newText end
+            function LabelItem:SetText(newText) LblText.Text = newText; SearchableElements[#SearchableElements].Name = newText:lower() end
             return LabelItem
         end
 
         function TabFunctions:AddButton(BtnText, Callback)
             local BtnFrame = Instance.new("Frame", TabPage)
-            BtnFrame.Size = UDim2.new(1, 0, 0, 35)
-            BtnFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); BtnFrame.BackgroundTransparency = 0.2
+            BtnFrame.Size = UDim2.new(1, 0, 0, 35); BtnFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); BtnFrame.BackgroundTransparency = 0.2
             Instance.new("UICorner", BtnFrame).CornerRadius = UDim.new(0, 5)
             local Btn = Instance.new("TextButton", BtnFrame)
             Btn.Size = UDim2.new(1, 0, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = BtnText; Btn.TextColor3 = Color3.fromRGB(230, 230, 230)
             Btn.Font = Enum.Font.GothamSemibold; Btn.TextSize = 13; Btn.TextXAlignment = Enum.TextXAlignment.Left
             Instance.new("UIPadding", Btn).PaddingLeft = UDim.new(0, 15)
-            AddRipple(Btn)
-            Btn.MouseButton1Click:Connect(function() Callback() end)
+            AddRipple(Btn); Btn.MouseButton1Click:Connect(function() Callback() end)
+            table.insert(SearchableElements, {Frame = BtnFrame, Name = BtnText:lower()})
         end
 
         function TabFunctions:AddDoubleButton(Btn1Text, Btn1Callback, Btn2Text, Btn2Callback)
             local Container = Instance.new("Frame", TabPage)
-            Container.Size = UDim2.new(1, 0, 0, 35)
-            Container.BackgroundTransparency = 1
-
+            Container.Size = UDim2.new(1, 0, 0, 35); Container.BackgroundTransparency = 1
             local Btn1Frame = Instance.new("Frame", Container)
-            Btn1Frame.Size = UDim2.new(0.5, -3, 1, 0)
-            Btn1Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-            Btn1Frame.BackgroundTransparency = 0.2
+            Btn1Frame.Size = UDim2.new(0.5, -3, 1, 0); Btn1Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn1Frame.BackgroundTransparency = 0.2
             Instance.new("UICorner", Btn1Frame).CornerRadius = UDim.new(0, 5)
-
             local Btn1 = Instance.new("TextButton", Btn1Frame)
-            Btn1.Size = UDim2.new(1, 0, 1, 0)
-            Btn1.BackgroundTransparency = 1
-            Btn1.Text = Btn1Text
-            Btn1.TextColor3 = Color3.fromRGB(230, 230, 230)
-            Btn1.Font = Enum.Font.GothamSemibold
-            Btn1.TextSize = 13
-            AddRipple(Btn1)
-            Btn1.MouseButton1Click:Connect(function() Btn1Callback() end)
+            Btn1.Size = UDim2.new(1, 0, 1, 0); Btn1.BackgroundTransparency = 1; Btn1.Text = Btn1Text; Btn1.TextColor3 = Color3.fromRGB(230, 230, 230); Btn1.Font = Enum.Font.GothamSemibold; Btn1.TextSize = 13
+            AddRipple(Btn1); Btn1.MouseButton1Click:Connect(function() Btn1Callback() end)
 
             local Btn2Frame = Instance.new("Frame", Container)
-            Btn2Frame.Size = UDim2.new(0.5, -3, 1, 0)
-            Btn2Frame.Position = UDim2.new(0.5, 3, 0, 0)
-            Btn2Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-            Btn2Frame.BackgroundTransparency = 0.2
+            Btn2Frame.Size = UDim2.new(0.5, -3, 1, 0); Btn2Frame.Position = UDim2.new(0.5, 3, 0, 0); Btn2Frame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); Btn2Frame.BackgroundTransparency = 0.2
             Instance.new("UICorner", Btn2Frame).CornerRadius = UDim.new(0, 5)
-
             local Btn2 = Instance.new("TextButton", Btn2Frame)
-            Btn2.Size = UDim2.new(1, 0, 1, 0)
-            Btn2.BackgroundTransparency = 1
-            Btn2.Text = Btn2Text
-            Btn2.TextColor3 = Color3.fromRGB(230, 230, 230)
-            Btn2.Font = Enum.Font.GothamSemibold
-            Btn2.TextSize = 13
-            AddRipple(Btn2)
-            Btn2.MouseButton1Click:Connect(function() Btn2Callback() end)
+            Btn2.Size = UDim2.new(1, 0, 1, 0); Btn2.BackgroundTransparency = 1; Btn2.Text = Btn2Text; Btn2.TextColor3 = Color3.fromRGB(230, 230, 230); Btn2.Font = Enum.Font.GothamSemibold; Btn2.TextSize = 13
+            AddRipple(Btn2); Btn2.MouseButton1Click:Connect(function() Btn2Callback() end)
+            
+            table.insert(SearchableElements, {Frame = Container, Name = Btn1Text:lower() .. " " .. Btn2Text:lower()})
         end
 
         function TabFunctions:AddToggle(ToggleText, Default, Callback, Flag)
@@ -346,6 +358,7 @@ function NoxvaLib:CreateWindow()
                 ToggleBtn.TextColor3 = State and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(230, 230, 230); Callback(State)
                 if Flag then NoxvaLib.Flags[Flag].Value = State end
             end)
+            table.insert(SearchableElements, {Frame = TglFrame, Name = ToggleText:lower()})
         end
 
         function TabFunctions:AddSlider(txt, min, max, def, Callback, Flag)
@@ -369,6 +382,7 @@ function NoxvaLib:CreateWindow()
             UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then upd(i) end end)
             UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
             Callback(val)
+            table.insert(SearchableElements, {Frame = ctn, Name = txt:lower()})
         end
 
         function TabFunctions:AddKeybind(BindText, DefaultKey, Callback)
@@ -398,6 +412,7 @@ function NoxvaLib:CreateWindow()
                     Callback()
                 end
             end)
+            table.insert(SearchableElements, {Frame = BindFrame, Name = BindText:lower()})
         end
 
         function TabFunctions:AddDropdown(DropText, Options, Callback, Flag)
@@ -440,6 +455,7 @@ function NoxvaLib:CreateWindow()
                 end)
             end
             if selected then Callback(selected) end
+            table.insert(SearchableElements, {Frame = DropdownFrame, Name = DropText:lower()})
         end
 
         function TabFunctions:AddTextbox(BoxText, Placeholder, Callback, Flag)
@@ -462,6 +478,85 @@ function NoxvaLib:CreateWindow()
                 if Flag then NoxvaLib.Flags[Flag].Value = TextBox.Text end
                 Callback(TextBox.Text) 
             end)
+            table.insert(SearchableElements, {Frame = BoxFrame, Name = BoxText:lower()})
+        end
+
+        function TabFunctions:AddColorPicker(TextContent, DefaultColor, Callback, Flag)
+            local color = DefaultColor or Color3.fromRGB(255, 255, 255)
+            if Flag and NoxvaLib.Flags[Flag] ~= nil then 
+                local saved = NoxvaLib.Flags[Flag].Value
+                if type(saved) == "table" and saved.IsColor then
+                    color = Color3.new(saved.R, saved.G, saved.B)
+                end
+            end
+
+            local PickerFrame = Instance.new("Frame", TabPage)
+            PickerFrame.Size = UDim2.new(1, 0, 0, 35)
+            PickerFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+            PickerFrame.BackgroundTransparency = 0.2
+            PickerFrame.ClipsDescendants = true
+            Instance.new("UICorner", PickerFrame).CornerRadius = UDim.new(0, 5)
+
+            local ToggleBtn = Instance.new("TextButton", PickerFrame)
+            ToggleBtn.Size = UDim2.new(1, 0, 0, 35); ToggleBtn.BackgroundTransparency = 1; ToggleBtn.Text = TextContent
+            ToggleBtn.TextColor3 = Color3.fromRGB(230, 230, 230); ToggleBtn.Font = Enum.Font.GothamSemibold; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
+            
+            local ColorPreview = Instance.new("Frame", ToggleBtn)
+            ColorPreview.Size = UDim2.new(0, 30, 0, 15); ColorPreview.Position = UDim2.new(1, -55, 0.5, -7.5)
+            ColorPreview.BackgroundColor3 = color
+            Instance.new("UICorner", ColorPreview).CornerRadius = UDim.new(0, 4)
+
+            local ExpandArea = Instance.new("Frame", PickerFrame)
+            ExpandArea.Size = UDim2.new(1, 0, 1, -35); ExpandArea.Position = UDim2.new(0, 0, 0, 35); ExpandArea.BackgroundTransparency = 1
+
+            local isOpen = false
+            ToggleBtn.MouseButton1Click:Connect(function()
+                isOpen = not isOpen
+                PickerFrame.Size = isOpen and UDim2.new(1, 0, 0, 115) or UDim2.new(1, 0, 0, 35)
+            end)
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = color, Func = Callback} end
+
+            local function CreateRGB(yPos, cName, initVal)
+                local lbl = Instance.new("TextLabel", ExpandArea)
+                lbl.Size = UDim2.new(0, 15, 0, 15); lbl.Position = UDim2.new(0, 15, 0, yPos - 3)
+                lbl.BackgroundTransparency = 1; lbl.Text = cName; lbl.TextColor3 = Color3.fromRGB(200, 200, 200); lbl.Font = Enum.Font.GothamBold; lbl.TextSize = 11
+
+                local bg = Instance.new("TextButton", ExpandArea)
+                bg.Size = UDim2.new(1, -60, 0, 8); bg.Position = UDim2.new(0, 35, 0, yPos)
+                bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); bg.Text = ""
+                Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+                local cFill = cName == "R" and Color3.fromRGB(255,50,50) or (cName == "G" and Color3.fromRGB(50,255,50)) or Color3.fromRGB(50,150,255)
+                local fill = Instance.new("Frame", bg)
+                fill.Size = UDim2.new(initVal, 0, 1, 0); fill.BackgroundColor3 = cFill
+                Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+                return bg, fill
+            end
+
+            local bgR, fillR = CreateRGB(10, "R", color.R)
+            local bgG, fillG = CreateRGB(35, "G", color.G)
+            local bgB, fillB = CreateRGB(60, "B", color.B)
+
+            local function HookColor(bg, fill)
+                local d = false
+                local function upd(i)
+                    local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+                    fill.Size = UDim2.new(p, 0, 1, 0)
+                    color = Color3.new(fillR.Size.X.Scale, fillG.Size.X.Scale, fillB.Size.X.Scale)
+                    ColorPreview.BackgroundColor3 = color
+                    if Flag then NoxvaLib.Flags[Flag].Value = color end
+                    Callback(color)
+                end
+                bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; upd(i) end end)
+                UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then upd(i) end end)
+                UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
+            end
+            HookColor(bgR, fillR); HookColor(bgG, fillG); HookColor(bgB, fillB)
+            
+            Callback(color)
+            table.insert(SearchableElements, {Frame = PickerFrame, Name = TextContent:lower()})
         end
 
         function TabFunctions:AddFolder(TitleText)
@@ -488,6 +583,8 @@ function NoxvaLib:CreateWindow()
             ItemLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
                 if isOpen then FolderFrame.Size = UDim2.new(1, 0, 0, 35 + ItemLayout.AbsoluteContentSize.Y + 10) end
             end)
+            
+            table.insert(SearchableElements, {Frame = FolderFrame, Name = TitleText:lower()})
 
             local FolderFuncs = {}
             function FolderFuncs:AddLabel(txt)
@@ -528,11 +625,52 @@ function NoxvaLib:CreateWindow()
         return TabFunctions
     end
 
-    WindowFunctions:Notify("NOXVA HUB", "Premium Engine Loaded! Welcome.", 4)
+    function WindowFunctions:MakeConfigTab()
+        local ConfTab = WindowFunctions:MakeTab("⚙️ Settings")
+        ConfTab:AddLabel("Konfigurasi Data akan disimpan di Folder Executor lu.")
+        ConfTab:AddButton("Save Settings", function()
+            local dataToSave = {}
+            for flagName, data in pairs(NoxvaLib.Flags) do 
+                if typeof(data.Value) == "Color3" then
+                    dataToSave[flagName] = {R = data.Value.R, G = data.Value.G, B = data.Value.B, IsColor = true}
+                else
+                    dataToSave[flagName] = data.Value 
+                end
+            end
+            local success, json = pcall(function() return HttpService:JSONEncode(dataToSave) end)
+            if success and writefile then
+                writefile("NoxvaHub_Config.json", json)
+                WindowFunctions:Notify("CONFIG", "Settings Saved Successfully!", 3)
+            else
+                WindowFunctions:Notify("ERROR", "Executor does not support writefile!", 3)
+            end
+        end)
+        
+        ConfTab:AddButton("Load Settings", function()
+            if readfile and isfile and isfile("NoxvaHub_Config.json") then
+                local success, json = pcall(function() return readfile("NoxvaHub_Config.json") end)
+                if success then
+                    local data = HttpService:JSONDecode(json)
+                    for flagName, value in pairs(data) do
+                        if NoxvaLib.Flags[flagName] then
+                            if type(value) == "table" and value.IsColor then
+                                NoxvaLib.Flags[flagName].Value = Color3.new(value.R, value.G, value.B)
+                                if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(Color3.new(value.R, value.G, value.B)) end
+                            else
+                                NoxvaLib.Flags[flagName].Value = value
+                                if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(value) end
+                            end
+                        end
+                    end
+                    WindowFunctions:Notify("CONFIG", "Settings Loaded!", 4)
+                end
+            else
+                WindowFunctions:Notify("ERROR", "No config file found!", 3)
+            end
+        end)
+    end
+
     return WindowFunctions
 end
 
--- ==========================================
--- INI BAGIAN PALING PENTING BIAR BISA DI-LOADSTRING
--- ==========================================
 return NoxvaLib
