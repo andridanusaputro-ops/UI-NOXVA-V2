@@ -52,7 +52,7 @@ function NoxvaLib:CreateWindow()
     local LogoImage = Instance.new("ImageLabel", OpenLogo)
     LogoImage.Size = UDim2.new(1, 0, 1, 0)
     LogoImage.BackgroundTransparency = 1
-    LogoImage.Image = "rbxthumb://type=Asset&id=15648362575&w=150&h=150" 
+    LogoImage.Image = "rbxthumb://type=Asset&id=136862598840480&w=150&h=150" 
     Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(1, 0)
     
     local LogoClicker = Instance.new("TextButton", OpenLogo)
