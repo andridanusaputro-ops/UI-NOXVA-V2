@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA UI ENGINE | FINAL PREMIUM BUILD V2
+-- NOXVA UI ENGINE | CORE LIBRARY
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} -- Tempat nyimpen data Config
@@ -146,7 +146,6 @@ function NoxvaLib:CreateWindow()
     MinBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; OpenLogo.Visible = true end)
     LogoClicker.MouseButton1Click:Connect(function() MainFrame.Visible = true; OpenLogo.Visible = false end)
 
-    -- [ANIMASI TWEEN BUAT TOMBOL BIAR PREMIUM]
     local function AddRipple(button)
         button.MouseButton1Down:Connect(function()
             TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0.5}):Play()
@@ -349,7 +348,6 @@ function NoxvaLib:CreateWindow()
             end)
         end
 
-        -- [NEW FEATURE] SLIDER DI TAB UTAMA
         function TabFunctions:AddSlider(txt, min, max, def, Callback, Flag)
             local val = def or min
             if Flag and NoxvaLib.Flags[Flag] ~= nil then val = NoxvaLib.Flags[Flag].Value end
@@ -373,7 +371,6 @@ function NoxvaLib:CreateWindow()
             Callback(val)
         end
 
-        -- [NEW FEATURE] KEYBIND SYSTEM
         function TabFunctions:AddKeybind(BindText, DefaultKey, Callback)
             local key = DefaultKey or Enum.KeyCode.E
             local BindFrame = Instance.new("Frame", TabPage)
@@ -492,7 +489,6 @@ function NoxvaLib:CreateWindow()
                 if isOpen then FolderFrame.Size = UDim2.new(1, 0, 0, 35 + ItemLayout.AbsoluteContentSize.Y + 10) end
             end)
 
-            -- FUNGSI DI DALAM FOLDER TETAP AMAN TIDAK ADA YANG DIHAPUS
             local FolderFuncs = {}
             function FolderFuncs:AddLabel(txt)
                 local LblFrame = Instance.new("Frame", ItemContainer); LblFrame.Size = UDim2.new(1, -20, 0, 0); LblFrame.AutomaticSize = Enum.AutomaticSize.Y; LblFrame.Position = UDim2.new(0, 10, 0, 0); LblFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40); LblFrame.BackgroundTransparency = 0.8; Instance.new("UICorner", LblFrame).CornerRadius = UDim.new(0, 5)
@@ -532,45 +528,11 @@ function NoxvaLib:CreateWindow()
         return TabFunctions
     end
 
-    -- [NEW FEATURE] AUTO CONFIG SYSTEM TAB
-    function WindowFunctions:MakeConfigTab()
-        local ConfTab = WindowFunctions:MakeTab("⚙️ Settings")
-        local ConfFolder = ConfTab:AddFolder("Configuration")
-        
-        ConfFolder:AddButton("Save Settings", function()
-            local dataToSave = {}
-            for flagName, data in pairs(NoxvaLib.Flags) do dataToSave[flagName] = data.Value end
-            local success, json = pcall(function() return HttpService:JSONEncode(dataToSave) end)
-            if success and writefile then
-                writefile("NoxvaHub_Config.json", json)
-                WindowFunctions:Notify("CONFIG", "Settings Saved Successfully!", 3)
-            else
-                WindowFunctions:Notify("ERROR", "Executor does not support writefile!", 3)
-            end
-        end)
-        
-        ConfFolder:AddButton("Load Settings", function()
-            if readfile and isfile and isfile("NoxvaHub_Config.json") then
-                local success, json = pcall(function() return readfile("NoxvaHub_Config.json") end)
-                if success then
-                    local data = HttpService:JSONDecode(json)
-                    for flagName, value in pairs(data) do
-                        if NoxvaLib.Flags[flagName] then
-                            NoxvaLib.Flags[flagName].Value = value
-                            -- Update UI and Logic implicitly by recalling the function (Requires executor re-run or dynamic update)
-                            -- Note: Realtime UI update for loaded config needs manual re-execution for simplicity in this build
-                        end
-                    end
-                    WindowFunctions:Notify("CONFIG", "Settings Loaded! Please re-execute script to apply.", 4)
-                end
-            else
-                WindowFunctions:Notify("ERROR", "No config file found!", 3)
-            end
-        end)
-    end
-
     WindowFunctions:Notify("NOXVA HUB", "Premium Engine Loaded! Welcome.", 4)
     return WindowFunctions
 end
 
+-- ==========================================
+-- INI BAGIAN PALING PENTING BIAR BISA DI-LOADSTRING
+-- ==========================================
 return NoxvaLib
