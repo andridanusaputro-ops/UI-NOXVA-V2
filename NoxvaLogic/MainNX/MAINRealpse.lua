@@ -1,28 +1,16 @@
-local FarmingFisch = {}
+local MAINRealpse = {}
 
--- Variabel bawaan disimpen di dalam table module ini
-FarmingFisch.IsFishing = false
-FarmingFisch.Multiplier = 100
-FarmingFisch.TargetFish = "Ancient Lochness Monster"
-FarmingFisch.TargetRarity = "Unknown"
+MAINRealpse.IsFishing = false
+MAINRealpse.Multiplier = 100
+MAINRealpse.TargetFish = "Ancient Lochness Monster"
 
--- Fungsi 1: Logic ngatur Rarity otomatis
-function FarmingFisch:SetTarget(namaIkan)
+-- Fungsi ganti target ikan dari Dropdown Window
+function MAINRealpse:SetTarget(namaIkan)
     self.TargetFish = namaIkan
-    local epics = {"Zombie Shark", "Frostborn Shark", "Queen Crab"}
-    local legends = {"Wild Serpent", "Red Serpent", "Worm Fish", "KingJelly Strong", "BloodMoon Whale"}
-    
-    if table.find(epics, namaIkan) then
-        self.TargetRarity = "Epic"
-    elseif table.find(legends, namaIkan) then
-        self.TargetRarity = "Legendary"
-    else
-        self.TargetRarity = "Unknown"
-    end
 end
 
--- Fungsi 2: Logic Mulai Mancing
-function FarmingFisch:ToggleFishing(state)
+-- Fungsi utama mancing dari Toggle Window
+function MAINRealpse:ToggleFishing(state)
     self.IsFishing = state
     if state then
         task.spawn(function()
@@ -33,13 +21,13 @@ function FarmingFisch:ToggleFishing(state)
                     RS.CastReplication:FireServer(Vector3.new(-112, -7, -1029), Vector3.new(-2, 5, -24), "Basic Rod", 94)
                     task.wait(2.2)
                     
-                    -- Nangkep ikan sesuai multiplier
+                    -- Tarik Ikan
                     for i = 1, self.Multiplier do
                         if not self.IsFishing then break end
                         RS.FishGiver:FireServer({
                             ["hookPosition"] = Vector3.new(-108, -19, -1037), 
                             ["name"] = self.TargetFish, 
-                            ["rarity"] = self.TargetRarity, 
+                            ["rarity"] = "Unknown", -- Rarity bisa diubah otomatis kalau butuh
                             ["weight"] = math.random(1500, 3500)
                         })
                     end
@@ -50,4 +38,4 @@ function FarmingFisch:ToggleFishing(state)
     end
 end
 
-return FarmingFisch
+return MAINRealpse
