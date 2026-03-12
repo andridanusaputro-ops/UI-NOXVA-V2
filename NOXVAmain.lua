@@ -1,6 +1,6 @@
 -- ==========================================
--- NOXVA HUB - MAIN UNIVERSAL LOADER + ULTRA CLEAN KEY SYSTEM (V3.0)
--- DEVELOPED BY DANZY (removed accent line & removed background dimming)
+-- NOXVA HUB (V3.0)
+-- DEVELOPED BY DANZY 
 -- ==========================================
 local BaseURL = "https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/main/"
 
@@ -23,7 +23,7 @@ local IsSupported, GameName = LogicMainMenu:CheckSupport(PlaceId)
 -- FUNGSI LOAD HUB UTAMA (Jalan Kalau Sukses)
 -- ==========================================
 local function LoadNoxvaHub()
-    -- Panggil Core UI Engine Lu (V2.8 yang ada multi-save)
+    -- Panggil Core UI Engine Lu 
     _G.NoxvaLib = GetFile("uiNoxvaV2.lua")
     
     if PlaceId == 81008840993724 then -- ID Game Fisch Lu
@@ -32,7 +32,6 @@ local function LoadNoxvaHub()
         _G.LogicTeleport = GetFile("NoxvaLogic/TeleportNX/TPRealpse.lua")
         _G.LogicSetting = GetFile("NoxvaLogic/SettingNX/SETTINGRealpse.lua")
         GetFile("NoxvaWindow/WINDOWNXRealpse.lua")
-    -- Nanti lu bisa tambahin else if buat game lain di sini
     end
 end
 
@@ -53,24 +52,22 @@ KeyUI.Name = "NoxvaPremiumKey_Clean"
 KeyUI.ResetOnSpawn = false
 KeyUI.Parent = targetParent
 
--- UPDATE: Parent MainKeyFrame langsung ke KeyUI (Biar gak ada transparansi gelap di belakang)
+-- Parent MainKeyFrame langsung ke KeyUI (Melayang murni tanpa background gelap)
 local MainKeyFrame = Instance.new("Frame", KeyUI)
 MainKeyFrame.Size = UDim2.new(0, 0, 0, 0) -- Animasi dari 0
 MainKeyFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainKeyFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainKeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Dibuat lebih gelap biar tetep menonjol
-MainKeyFrame.BackgroundTransparency = 0.02 -- Hampir solid
+MainKeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) 
+MainKeyFrame.BackgroundTransparency = 0.02 
 MainKeyFrame.ClipsDescendants = true
 Instance.new("UICorner", MainKeyFrame).CornerRadius = UDim.new(0, 10)
 
--- UPDATE: Garis Aksen Biru di atas DIHAPUS.
-
--- Logo Kotak Lu (Pake rbxassetid biar pasti muncul cok!)
+-- Logo Kotak Lu (Pake rbxassetid biar pasti muncul)
 local LogoImage = Instance.new("ImageLabel", MainKeyFrame)
 LogoImage.Size = UDim2.new(0, 55, 0, 55)
 LogoImage.Position = UDim2.new(0.5, -27.5, 0, 20)
 LogoImage.BackgroundTransparency = 1
-LogoImage.Image = "rbxassetid://125602638236059" -- ID Logo Noxva
+LogoImage.Image = "rbxassetid://125602638236059" 
 LogoImage.ScaleType = Enum.ScaleType.Fit
 Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(0, 10)
 
@@ -94,7 +91,7 @@ SubTitle.Text = IsSupported and ("Game: " .. GameName) or "GAME NOT SUPPORTED"
 SubTitle.Font = Enum.Font.GothamSemibold
 SubTitle.TextSize = 12
 
--- Animasi Hover Tombol (Biar lumer)
+-- Animasi Hover Tombol
 local function AddHover(btn, normalColor, hoverColor)
     btn.MouseEnter:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = hoverColor}):Play() end)
     btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = normalColor}):Play() end)
@@ -104,7 +101,7 @@ end
 -- PEMBAGIAN UI (SUPPORTED vs NOT SUPPORTED)
 -- ==========================================
 if IsSupported then
-    -- TAMPILAN JIKA GAME DI-SUPPORT (Tinggi 240)
+    -- TAMPILAN JIKA GAME DI-SUPPORT
     local KeyBox = Instance.new("TextBox", MainKeyFrame)
     KeyBox.Size = UDim2.new(1, -50, 0, 40)
     KeyBox.Position = UDim2.new(0, 25, 0, 135)
@@ -139,21 +136,37 @@ if IsSupported then
     AddHover(VerifyBtn, Color3.fromRGB(0, 120, 255), Color3.fromRGB(0, 150, 255))
     AddHover(GetKeyBtn, Color3.fromRGB(35, 35, 35), Color3.fromRGB(50, 50, 50))
 
-    -- Logic Tombol Kalo Support
+    -- LOGIC TOMBOL GET KEY (AUTO OPEN DISCORD)
     GetKeyBtn.MouseButton1Click:Connect(function()
-        if LogicMainMenu:CopyDiscordLink() then
-            GetKeyBtn.Text = "Copied!"
-            task.wait(2)
-            GetKeyBtn.Text = "Get Key"
+        local discordLink = LogicMainMenu.DiscordLink
+        
+        -- 1. Copy ke clipboard (Cadangan)
+        if setclipboard then
+            setclipboard(discordLink)
         end
+        
+        -- 2. Coba paksa buka browser otomatis
+        local reqFunc = request or (syn and syn.request) or http_request
+        if reqFunc then
+            pcall(function()
+                reqFunc({
+                    Url = discordLink,
+                    Method = "GET"
+                })
+            end)
+        end
+
+        GetKeyBtn.Text = "Opening Discord..."
+        task.wait(2)
+        GetKeyBtn.Text = "Get Key"
     end)
 
+    -- LOGIC TOMBOL VERIFY
     VerifyBtn.MouseButton1Click:Connect(function()
         local isSukses, pesan = LogicMainMenu:VerifyKey(KeyBox.Text)
         if isSukses then
             VerifyBtn.Text = pesan
             VerifyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            -- Animasi sukses nutup pop-up
             local closeTween = TweenService:Create(MainKeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
             closeTween:Play()
             closeTween.Completed:Connect(function()
@@ -169,11 +182,11 @@ if IsSupported then
         end
     end)
     
-    -- Play Animasi Muncul (Size 320x245)
+    -- Play Animasi Muncul
     TweenService:Create(MainKeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 320, 0, 245)}):Play()
 
 else
-    -- TAMPILAN JIKA GAME GAK DI-SUPPORT (Tinggi 200)
+    -- TAMPILAN JIKA GAME GAK DI-SUPPORT
     local ErrorDesc = Instance.new("TextLabel", MainKeyFrame)
     ErrorDesc.Size = UDim2.new(1, -40, 0, 30)
     ErrorDesc.Position = UDim2.new(0, 20, 0, 125)
@@ -222,6 +235,6 @@ else
         closeTween.Completed:Connect(function() KeyUI:Destroy() end)
     end)
 
-    -- Play Animasi Muncul (Size 320x225 - Lebih pendek)
+    -- Play Animasi Muncul 
     TweenService:Create(MainKeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 320, 0, 220)}):Play()
 end
