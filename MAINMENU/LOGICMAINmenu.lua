@@ -5,7 +5,7 @@
 local MainMenuLogic = {}
 
 -- [ SETTINGAN KEY & DISCORD ]
-MainMenuLogic.ValidKey = "NOXVA-WANGLIN-V2" 
+MainMenuLogic.ValidKey = "DANZY" 
 MainMenuLogic.DiscordLink = "https://discord.gg/noxvahub" 
 
 -- [ DATABASE GAME YANG DI-SUPPORT ]
