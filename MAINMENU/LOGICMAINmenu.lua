@@ -6,11 +6,11 @@ local MainMenuLogic = {}
 
 -- [ SETTINGAN KEY & DISCORD LU DI SINI ]
 MainMenuLogic.ValidKey = "DANZY" 
-MainMenuLogic.DiscordLink = "https://discord.gg/VbumttfB2" -- LINK DC LU
+MainMenuLogic.DiscordLink = "https://discord.gg/VbumttfB2"
 
 -- [ DATABASE GAME YANG DI-SUPPORT ]
 MainMenuLogic.SupportedGames = {
-    [81008840993724] = "Realpse kesepian",
+    [81008840993724] = "Realpse Kesepian",
 }
 
 function MainMenuLogic:CheckSupport(PlaceId)
@@ -28,12 +28,32 @@ function MainMenuLogic:VerifyKey(InputKey)
     end
 end
 
-function MainMenuLogic:CopyDiscordLink()
+-- ==========================================
+-- LOGIC BUKA DISCORD & COPY LINK
+-- ==========================================
+function MainMenuLogic:OpenDiscord()
+    local statusPesan = "Copied to Clipboard!"
+    
+    -- 1. Copy ke clipboard buat jaga-jaga
     if setclipboard then
         setclipboard(self.DiscordLink)
-        return true
     end
-    return false
+    
+    -- 2. Coba paksa buka browser otomatis
+    local reqFunc = request or (syn and syn.request) or http_request
+    if reqFunc then
+        local success = pcall(function()
+            reqFunc({
+                Url = self.DiscordLink,
+                Method = "GET"
+            })
+        end)
+        if success then
+            statusPesan = "Opening Discord..."
+        end
+    end
+    
+    return statusPesan
 end
 
 return MainMenuLogic
