@@ -1,14 +1,12 @@
 -- ==========================================
 -- NOXVA UI ENGINE | PURE CORE LIBRARY V2.5
--- DEVELOPED BY DANZY 
+-- DEVELOPED BY DANZY (100% FULL FIX + COLOR PICKER SMOOTH)
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} 
-NoxvaLib.AccentColor = Color3.fromRGB(0, 120, 255) -- Warna Default (Biru)
+NoxvaLib.AccentColor = Color3.fromRGB(0, 120, 255)
 
--- Lu bisa masukin Custom Nama dan Warna pas manggil fungsi ini
 function NoxvaLib:CreateWindow(CustomName, CustomColor)
-    -- Setting Dinamis dari eksekutor lu
     local HubTitle = CustomName or "NOXVA PREMIUM"
     NoxvaLib.AccentColor = CustomColor or NoxvaLib.AccentColor
 
@@ -25,7 +23,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     NoxvaUI.Name = "NoxvaHub_Pure"
     NoxvaUI.ResetOnSpawn = false 
 
-    -- [[ PERBAIKAN SISTEM GUI KHUSUS DELTA/MOBILE ]]
     local successHui, hui = pcall(function() return gethui() end)
     local targetParent
     if successHui and hui then
@@ -62,21 +59,10 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     OpenLogo.BackgroundTransparency = 0.15
     OpenLogo.Visible = false 
     Instance.new("UICorner", OpenLogo).CornerRadius = UDim.new(1, 0)
-    
-    local LogoStroke = Instance.new("UIStroke", OpenLogo)
-    LogoStroke.Color = NoxvaLib.AccentColor
-    LogoStroke.Thickness = 2
-    
-    local LogoImage = Instance.new("ImageLabel", OpenLogo)
-    LogoImage.Size = UDim2.new(1, 0, 1, 0)
-    LogoImage.BackgroundTransparency = 1
-    LogoImage.Image = "rbxthumb://type=Asset&id=136862598840480&w=150&h=150" 
+    local LogoStroke = Instance.new("UIStroke", OpenLogo); LogoStroke.Color = NoxvaLib.AccentColor; LogoStroke.Thickness = 2
+    local LogoImage = Instance.new("ImageLabel", OpenLogo); LogoImage.Size = UDim2.new(1, 0, 1, 0); LogoImage.BackgroundTransparency = 1; LogoImage.Image = "rbxthumb://type=Asset&id=136862598840480&w=150&h=150" 
     Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(1, 0)
-    
-    local LogoClicker = Instance.new("TextButton", OpenLogo)
-    LogoClicker.Size = UDim2.new(1, 0, 1, 0)
-    LogoClicker.BackgroundTransparency = 1
-    LogoClicker.Text = ""
+    local LogoClicker = Instance.new("TextButton", OpenLogo); LogoClicker.Size = UDim2.new(1, 0, 1, 0); LogoClicker.BackgroundTransparency = 1; LogoClicker.Text = ""
 
     local FloatBg = Instance.new("Frame", OpenLogo)
     FloatBg.Position = UDim2.new(0.5, 0, 0, -35)
@@ -221,7 +207,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 VirtualUser:CaptureController()
                 VirtualUser:ClickButton2(Vector2.new())
             end)
-            self:Notify("SYSTEM", "Anti-AFK Aktif! Lu aman dari kick 20 menit.", 3)
+            self:Notify("SYSTEM", "Anti-AFK Aktif! Lu aman dari kick.", 3)
         end
     end
 
@@ -862,6 +848,8 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 local d = false
                 local function upd(i)
                     local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+                    -- FIX: TERNYATA BARIS INI KETINGGALAN COK
+                    fill.Size = UDim2.new(p, 0, 1, 0) 
                     UpdateVisual(Color3.new(fillR.Size.X.Scale, fillG.Size.X.Scale, fillB.Size.X.Scale))
                 end
                 bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; upd(i) end end)
