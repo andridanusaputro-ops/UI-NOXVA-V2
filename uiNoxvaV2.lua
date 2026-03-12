@@ -1,6 +1,6 @@
 -- ==========================================
--- NOXVA UI ENGINE | PURE CORE LIBRARY V2.5
--- DEVELOPED BY DANZY (100% FULL FIX + COMPACT SERAPHIN SIZE + KOTAK LOGO)
+-- NOXVA UI ENGINE | PURE CORE LIBRARY V2.6
+-- DEVELOPED BY DANZY 
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} 
@@ -53,28 +53,26 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     NotifLayout.Padding = UDim.new(0, 10)
 
     -- ==========================================
-    -- LOGO KOTAK SAAT DI-CLOSE
+    -- LOGO KOTAK MELENGKUNG SAAT DI-CLOSE (ROUNDED SQUARE, NO BORDER)
     -- ==========================================
     local OpenLogo = Instance.new("Frame", NoxvaUI)
-    OpenLogo.Size = UDim2.new(0, 50, 0, 50)
+    OpenLogo.Size = UDim2.new(0, 50, 0, 50) -- Ukuran tetep sama
     OpenLogo.Position = UDim2.new(0.5, -25, 0, 20)
-    OpenLogo.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    OpenLogo.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Warna gelap kayak Seraphin
     OpenLogo.BackgroundTransparency = 0.15
     OpenLogo.Visible = false 
-    -- UICorner Dihapus biar jadi kotak murni!
-
-    local LogoStroke = Instance.new("UIStroke", OpenLogo)
-    LogoStroke.Color = NoxvaLib.AccentColor
-    LogoStroke.Thickness = 2
-    LogoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Biar rapih di ujung kotak
+    -- UICORNER MELEKUNG DIKIT ALA SERAPHIN
+    Instance.new("UICorner", OpenLogo).CornerRadius = UDim.new(0, 8) -- Kotak ujung melekung (bukan 1,0 yang bulet)
+    -- UIStroke (Garis Border) Gue Hapus!
 
     local LogoImage = Instance.new("ImageLabel", OpenLogo)
-    LogoImage.Size = UDim2.new(1, -4, 1, -4) -- Padding biar gak ketutup stroke
-    LogoImage.Position = UDim2.new(0, 2, 0, 2)
+    LogoImage.Size = UDim2.new(1, 0, 1, 0) -- Pure icon
     LogoImage.BackgroundTransparency = 1
-    LogoImage.Image = "rbxthumb://type=Asset&id=125602638236059&w=150&h=150" 
-    LogoImage.ScaleType = Enum.ScaleType.Fit
-    -- UICorner Dihapus!
+    -- Masukin ImageDecal ID N lu yang tajam di sini cok
+    LogoImage.Image = "rbxthumb://type=Asset&id=rbxassetid://136862598840480&w=150&h=150" 
+    LogoImage.ScaleType = Enum.ScaleType.Fit -- Biar gak gepeng
+    -- UICORNER MELEKUNG JUGA BUAT GAMBARNYA BIAR SINKRON
+    Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(0, 8)
 
     local LogoClicker = Instance.new("TextButton", OpenLogo)
     LogoClicker.Size = UDim2.new(1, 0, 1, 0)
@@ -205,17 +203,17 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     MakeDraggable(MainFrame, TopBar); MakeDraggable(OpenLogo, LogoClicker)
 
     -- ==========================================
-    -- SIDEBAR & CONTENT AREA (DISESUAIKAN LEBARNYA)
+    -- SIDEBAR & CONTENT AREA (COMPACT SERAPHIN WIDTH)
     -- ==========================================
     local Sidebar = Instance.new("Frame", MainFrame)
-    Sidebar.Size = UDim2.new(0, 115, 1, -40); Sidebar.Position = UDim2.new(0, 0, 0, 40)
+    Sidebar.Size = UDim2.new(0, 115, 1, -40); Sidebar.Position = UDim2.new(0, 0, 0, 40) -- Lebar jadi 115
     Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Sidebar.BackgroundTransparency = 0.2
     Sidebar.BorderSizePixel = 0
     local SidebarLayout = Instance.new("UIListLayout", Sidebar)
     SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder; SidebarLayout.Padding = UDim.new(0, 5)
 
     local ContentArea = Instance.new("Frame", MainFrame)
-    ContentArea.Size = UDim2.new(1, -115, 1, -40); ContentArea.Position = UDim2.new(0, 115, 0, 40)
+    ContentArea.Size = UDim2.new(1, -115, 1, -40); ContentArea.Position = UDim2.new(0, 115, 0, 40) -- Sesuaiin lebar sidebar
     ContentArea.BackgroundTransparency = 1
 
     local WindowFunctions = {}
@@ -422,6 +420,8 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             local Btn = Instance.new("TextButton", BtnFrame)
             Btn.Size = UDim2.new(1, 0, 1, 0); Btn.BackgroundTransparency = 1; Btn.Text = BtnText; Btn.TextColor3 = Color3.fromRGB(230, 230, 230)
             Btn.Font = Enum.Font.GothamSemibold; Btn.TextSize = 13; Btn.TextXAlignment = Enum.TextXAlignment.Left
+            -- BIAR GA NABRAK ALA COMPACT
+            Btn.TextTruncate = Enum.TextTruncate.AtEnd 
             Instance.new("UIPadding", Btn).PaddingLeft = UDim.new(0, 15)
             AddRipple(Btn); Btn.MouseButton1Click:Connect(function() Callback() end)
             table.insert(SearchableElements, {Frame = BtnFrame, Name = BtnText:lower()})
@@ -435,6 +435,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             Instance.new("UICorner", Btn1Frame).CornerRadius = UDim.new(0, 5)
             local Btn1 = Instance.new("TextButton", Btn1Frame)
             Btn1.Size = UDim2.new(1, 0, 1, 0); Btn1.BackgroundTransparency = 1; Btn1.Text = Btn1Text; Btn1.TextColor3 = Color3.fromRGB(230, 230, 230); Btn1.Font = Enum.Font.GothamSemibold; Btn1.TextSize = 13
+            Btn1.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             AddRipple(Btn1); Btn1.MouseButton1Click:Connect(function() Btn1Callback() end)
 
             local Btn2Frame = Instance.new("Frame", Container)
@@ -442,6 +443,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             Instance.new("UICorner", Btn2Frame).CornerRadius = UDim.new(0, 5)
             local Btn2 = Instance.new("TextButton", Btn2Frame)
             Btn2.Size = UDim2.new(1, 0, 1, 0); Btn2.BackgroundTransparency = 1; Btn2.Text = Btn2Text; Btn2.TextColor3 = Color3.fromRGB(230, 230, 230); Btn2.Font = Enum.Font.GothamSemibold; Btn2.TextSize = 13
+            Btn2.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             AddRipple(Btn2); Btn2.MouseButton1Click:Connect(function() Btn2Callback() end)
             
             table.insert(SearchableElements, {Frame = Container, Name = Btn1Text:lower() .. " " .. Btn2Text:lower()})
@@ -459,6 +461,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
             ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
             ToggleBtn.Font = Enum.Font.GothamSemibold; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
             AddRipple(ToggleBtn)
             
@@ -498,6 +501,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
             ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
             ToggleBtn.Font = Enum.Font.GothamSemibold; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
             AddRipple(ToggleBtn)
 
@@ -542,6 +546,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
 
             local ctn = Instance.new("Frame", TabPage); ctn.Size = UDim2.new(1, 0, 0, 50); ctn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); ctn.BackgroundTransparency = 0.2; Instance.new("UICorner", ctn).CornerRadius = UDim.new(0, 5)
             local lbl = Instance.new("TextLabel", ctn); lbl.Size = UDim2.new(1, -30, 0, 20); lbl.Position = UDim2.new(0, 15, 0, 5); lbl.BackgroundTransparency = 1; lbl.Text = txt .. " : " .. tostring(val); lbl.TextColor3 = Color3.fromRGB(230, 230, 230); lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
+            lbl.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             local bg = Instance.new("TextButton", ctn); bg.Size = UDim2.new(1, -30, 0, 6); bg.Position = UDim2.new(0, 15, 0, 32); bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); bg.Text = ""; Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
             local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = NoxvaLib.AccentColor; Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
             
@@ -573,6 +578,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             local BindLabel = Instance.new("TextLabel", BindFrame)
             BindLabel.Size = UDim2.new(0.5, 0, 1, 0); BindLabel.Position = UDim2.new(0, 15, 0, 0); BindLabel.BackgroundTransparency = 1
             BindLabel.Text = BindText; BindLabel.TextColor3 = Color3.fromRGB(230, 230, 230); BindLabel.Font = Enum.Font.GothamSemibold; BindLabel.TextSize = 13; BindLabel.TextXAlignment = Enum.TextXAlignment.Left
+            BindLabel.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             
             local BindBtn = Instance.new("TextButton", BindFrame)
             BindBtn.Size = UDim2.new(0, 80, 0, 25); BindBtn.Position = UDim2.new(1, -95, 0, 5); BindBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -603,6 +609,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 5)
             local DropButton = Instance.new("TextButton", DropdownFrame)
             DropButton.Size = UDim2.new(1, 0, 0, 35); DropButton.BackgroundTransparency = 1; DropButton.Text = DropText .. " :  " .. tostring(selected or ""); DropButton.TextColor3 = Color3.fromRGB(230, 230, 230); DropButton.Font = Enum.Font.GothamSemibold; DropButton.TextSize = 13; DropButton.TextXAlignment = Enum.TextXAlignment.Left
+            DropButton.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", DropButton).PaddingLeft = UDim.new(0, 15)
             AddRipple(DropButton)
 
@@ -633,6 +640,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             for _, option in ipairs(Options) do
                 local OptBtn = Instance.new("TextButton", DropContainer)
                 OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = tostring(option); OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200); OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                OptBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK LIST Dropdownnya
                 Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
                 AddRipple(OptBtn)
                 OptBtn.MouseButton1Click:Connect(function() UpdateVisual(option) end)
@@ -651,6 +659,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             
             local DropButton = Instance.new("TextButton", DropdownFrame)
             DropButton.Size = UDim2.new(1, 0, 0, 35); DropButton.BackgroundTransparency = 1; DropButton.Text = DropText .. " :  " .. tostring(selected or ""); DropButton.TextColor3 = Color3.fromRGB(230, 230, 230); DropButton.Font = Enum.Font.GothamSemibold; DropButton.TextSize = 13; DropButton.TextXAlignment = Enum.TextXAlignment.Left
+            DropButton.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", DropButton).PaddingLeft = UDim.new(0, 15)
             AddRipple(DropButton)
 
@@ -678,6 +687,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                     for _, player in ipairs(playerList) do
                         local OptBtn = Instance.new("TextButton", DropContainer)
                         OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = player.Name; OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200); OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                        OptBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
                         Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
                         AddRipple(OptBtn)
                         OptBtn.MouseButton1Click:Connect(function() UpdateVisual(player.Name) end)
@@ -712,6 +722,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
 
             local DropButton = Instance.new("TextButton", DropdownFrame)
             DropButton.Size = UDim2.new(1, 0, 0, 35); DropButton.BackgroundTransparency = 1; DropButton.Text = DropText .. " :  " .. GetSelectedString(); DropButton.TextColor3 = Color3.fromRGB(230, 230, 230); DropButton.Font = Enum.Font.GothamSemibold; DropButton.TextSize = 13; DropButton.TextXAlignment = Enum.TextXAlignment.Left
+            DropButton.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", DropButton).PaddingLeft = UDim.new(0, 15)
             AddRipple(DropButton)
 
@@ -754,6 +765,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = tostring(option)
                 OptBtn.TextColor3 = isOptSelected and NoxvaLib.AccentColor or Color3.fromRGB(200, 200, 200)
                 OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                OptBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
                 Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
                 AddRipple(OptBtn)
                 
@@ -780,6 +792,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             Instance.new("UICorner", BoxFrame).CornerRadius = UDim.new(0, 5)
             local BoxLabel = Instance.new("TextLabel", BoxFrame)
             BoxLabel.Size = UDim2.new(0.4, 0, 1, 0); BoxLabel.Position = UDim2.new(0, 15, 0, 0); BoxLabel.BackgroundTransparency = 1; BoxLabel.Text = BoxText; BoxLabel.TextColor3 = Color3.fromRGB(230, 230, 230); BoxLabel.Font = Enum.Font.GothamSemibold; BoxLabel.TextSize = 13; BoxLabel.TextXAlignment = Enum.TextXAlignment.Left
+            BoxLabel.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             local TextBox = Instance.new("TextBox", BoxFrame)
             TextBox.Size = UDim2.new(0.55, -20, 0, 28); TextBox.Position = UDim2.new(0.45, 5, 0, 6); TextBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20); TextBox.PlaceholderText = Placeholder; TextBox.Text = val; TextBox.TextColor3 = Color3.fromRGB(255, 255, 255); TextBox.Font = Enum.Font.Gotham; TextBox.TextSize = 12
             Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 5)
@@ -817,6 +830,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             local ToggleBtn = Instance.new("TextButton", PickerFrame)
             ToggleBtn.Size = UDim2.new(1, 0, 0, 35); ToggleBtn.BackgroundTransparency = 1; ToggleBtn.Text = TextContent
             ToggleBtn.TextColor3 = Color3.fromRGB(230, 230, 230); ToggleBtn.Font = Enum.Font.GothamSemibold; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+            ToggleBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
             
             local ColorPreview = Instance.new("Frame", ToggleBtn)
@@ -891,6 +905,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
 
             local FolderBtn = Instance.new("TextButton", FolderFrame)
             FolderBtn.Size = UDim2.new(1, 0, 0, 35); FolderBtn.BackgroundTransparency = 1; FolderBtn.Text = TitleText .. "   ▼"; FolderBtn.TextColor3 = Color3.fromRGB(255, 255, 255); FolderBtn.Font = Enum.Font.GothamBold; FolderBtn.TextSize = 13; FolderBtn.TextXAlignment = Enum.TextXAlignment.Left
+            FolderBtn.TextTruncate = Enum.TextTruncate.AtEnd -- BIAR GA NABRAK
             Instance.new("UIPadding", FolderBtn).PaddingLeft = UDim.new(0, 15)
             AddRipple(FolderBtn)
 
