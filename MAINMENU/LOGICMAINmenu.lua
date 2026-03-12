@@ -5,7 +5,7 @@
 local MainMenuLogic = {}
 
 -- [ SETTINGAN KEY & DISCORD LU DI SINI ]
-MainMenuLogic.ValidKey = "NOXVA-WANGLIN-V2" 
+MainMenuLogic.ValidKey = "DANZYV2" 
 MainMenuLogic.DiscordLink = "https://discord.gg/VbumttfB2"
 
 function MainMenuLogic:CheckSupport(PlaceId)
