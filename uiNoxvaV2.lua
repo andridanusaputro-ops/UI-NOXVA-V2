@@ -1,12 +1,17 @@
 -- ==========================================
--- NOXVA UI ENGINE | FINAL PREMIUM BUILD V2.3
--- CORE LIBRARY (DO NOT EXECUTE DIRECTLY)
+-- NOXVA UI ENGINE | PURE CORE LIBRARY V2.5
+-- DEVELOPED BY DANZY 
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} 
-NoxvaLib.AntiAFKLoaded = false
+NoxvaLib.AccentColor = Color3.fromRGB(0, 120, 255) -- Warna Default (Biru)
 
-function NoxvaLib:CreateWindow()
+-- Lu bisa masukin Custom Nama dan Warna pas manggil fungsi ini
+function NoxvaLib:CreateWindow(CustomName, CustomColor)
+    -- Setting Dinamis dari eksekutor lu
+    local HubTitle = CustomName or "NOXVA PREMIUM"
+    NoxvaLib.AccentColor = CustomColor or NoxvaLib.AccentColor
+
     local CoreGui = game:GetService("CoreGui")
     local RunService = game:GetService("RunService")
     local UserInputService = game:GetService("UserInputService")
@@ -46,7 +51,7 @@ function NoxvaLib:CreateWindow()
     Instance.new("UICorner", OpenLogo).CornerRadius = UDim.new(1, 0)
     
     local LogoStroke = Instance.new("UIStroke", OpenLogo)
-    LogoStroke.Color = Color3.fromRGB(0, 120, 255)
+    LogoStroke.Color = NoxvaLib.AccentColor
     LogoStroke.Thickness = 2
     
     local LogoImage = Instance.new("ImageLabel", OpenLogo)
@@ -70,7 +75,7 @@ function NoxvaLib:CreateWindow()
     Instance.new("UICorner", FloatBg).CornerRadius = UDim.new(1, 0)
     
     local FloatStroke = Instance.new("UIStroke", FloatBg)
-    FloatStroke.Color = Color3.fromRGB(0, 120, 255)
+    FloatStroke.Color = NoxvaLib.AccentColor
     FloatStroke.Thickness = 1.5
     local FloatPad = Instance.new("UIPadding", FloatBg)
     FloatPad.PaddingLeft = UDim.new(0, 12); FloatPad.PaddingRight = UDim.new(0, 12)
@@ -110,7 +115,7 @@ function NoxvaLib:CreateWindow()
     TitleLabel.Size = UDim2.new(0, 200, 1, 0)
     TitleLabel.Position = UDim2.new(0, 15, 0, 0)
     TitleLabel.BackgroundTransparency = 1
-    TitleLabel.Text = "NOXVA HUB | PREMIUM"
+    TitleLabel.Text = HubTitle
     TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
     TitleLabel.Font = Enum.Font.GothamBold
     TitleLabel.TextSize = 13
@@ -125,7 +130,12 @@ function NoxvaLib:CreateWindow()
     TopBarStats.TextSize = 12
 
     local frames, lastUpdate = 0, tick()
-    RunService.RenderStepped:Connect(function()
+    local renderConnection
+    renderConnection = RunService.RenderStepped:Connect(function()
+        if not NoxvaUI or not NoxvaUI.Parent then
+            if renderConnection then renderConnection:Disconnect() end
+            return
+        end
         frames = frames + 1
         if tick() - lastUpdate >= 1 then
             local currentPing = 0
@@ -190,8 +200,8 @@ function NoxvaLib:CreateWindow()
     local FirstTab = true
 
     function WindowFunctions:EnableAntiAFK()
-        if NoxvaLib.AntiAFKLoaded then return end
-        NoxvaLib.AntiAFKLoaded = true
+        if getgenv().NoxvaAntiAFKLoaded then return end
+        getgenv().NoxvaAntiAFKLoaded = true
         local VirtualUser = game:GetService("VirtualUser")
         Players.LocalPlayer.Idled:Connect(function()
             VirtualUser:CaptureController()
@@ -207,12 +217,12 @@ function NoxvaLib:CreateWindow()
         NotifFrame.Position = UDim2.new(1, 300, 0, 0)
         Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 5)
         local NStroke = Instance.new("UIStroke", NotifFrame)
-        NStroke.Color = Color3.fromRGB(0, 120, 255); NStroke.Thickness = 1.5
+        NStroke.Color = NoxvaLib.AccentColor; NStroke.Thickness = 1.5
 
         local NotifTitle = Instance.new("TextLabel", NotifFrame)
         NotifTitle.Size = UDim2.new(1, -20, 0, 20); NotifTitle.Position = UDim2.new(0, 10, 0, 5)
         NotifTitle.BackgroundTransparency = 1; NotifTitle.Text = Title
-        NotifTitle.TextColor3 = Color3.fromRGB(0, 120, 255); NotifTitle.Font = Enum.Font.GothamBold
+        NotifTitle.TextColor3 = NoxvaLib.AccentColor; NotifTitle.Font = Enum.Font.GothamBold
         NotifTitle.TextSize = 13; NotifTitle.TextXAlignment = Enum.TextXAlignment.Left
 
         local NotifDesc = Instance.new("TextLabel", NotifFrame)
@@ -242,7 +252,7 @@ function NoxvaLib:CreateWindow()
         TabPage.BackgroundTransparency = 1; TabPage.ScrollBarThickness = 0 
         TabPage.Visible = FirstTab; TabPage.BorderSizePixel = 0
 
-        if FirstTab then TabBtn.TextColor3 = Color3.fromRGB(0, 120, 255); FirstTab = false end
+        if FirstTab then TabBtn.TextColor3 = NoxvaLib.AccentColor; FirstTab = false end
 
         local PageLayout = Instance.new("UIListLayout", TabPage)
         PageLayout.SortOrder = Enum.SortOrder.LayoutOrder; PageLayout.Padding = UDim.new(0, 6)
@@ -253,7 +263,7 @@ function NoxvaLib:CreateWindow()
         TabBtn.MouseButton1Click:Connect(function()
             for _, child in pairs(ContentArea:GetChildren()) do if child:IsA("ScrollingFrame") then child.Visible = false end end
             for _, child in pairs(Sidebar:GetChildren()) do if child:IsA("TextButton") then child.TextColor3 = Color3.fromRGB(150, 150, 150) end end
-            TabPage.Visible = true; TabBtn.TextColor3 = Color3.fromRGB(0, 120, 255)
+            TabPage.Visible = true; TabBtn.TextColor3 = NoxvaLib.AccentColor
         end)
 
         local TabFunctions = {}
@@ -265,7 +275,7 @@ function NoxvaLib:CreateWindow()
             SearchFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25); SearchFrame.BackgroundTransparency = 0.2
             Instance.new("UICorner", SearchFrame).CornerRadius = UDim.new(0, 5)
             local SearchStroke = Instance.new("UIStroke", SearchFrame)
-            SearchStroke.Color = Color3.fromRGB(0, 120, 255); SearchStroke.Thickness = 1; SearchStroke.Transparency = 0.5
+            SearchStroke.Color = NoxvaLib.AccentColor; SearchStroke.Thickness = 1; SearchStroke.Transparency = 0.5
             local SearchBox = Instance.new("TextBox", SearchFrame)
             SearchBox.Size = UDim2.new(1, -30, 1, 0); SearchBox.Position = UDim2.new(0, 15, 0, 0)
             SearchBox.BackgroundTransparency = 1; SearchBox.PlaceholderText = "🔍 Cari fitur di sini..."
@@ -301,6 +311,84 @@ function NoxvaLib:CreateWindow()
             local LabelItem = {}
             function LabelItem:SetText(newText) LblText.Text = newText; SearchableElements[#SearchableElements].Name = newText:lower() end
             return LabelItem
+        end
+
+        function TabFunctions:AddSection(TextContent)
+            local SecFrame = Instance.new("Frame", TabPage)
+            SecFrame.Size = UDim2.new(1, 0, 0, 25)
+            SecFrame.BackgroundTransparency = 1
+            
+            local SecText = Instance.new("TextLabel", SecFrame)
+            SecText.Size = UDim2.new(1, 0, 1, 0)
+            SecText.BackgroundTransparency = 1
+            SecText.Text = "- " .. TextContent .. " -"
+            SecText.TextColor3 = NoxvaLib.AccentColor
+            SecText.Font = Enum.Font.GothamBold
+            SecText.TextSize = 12
+            
+            table.insert(SearchableElements, {Frame = SecFrame, Name = TextContent:lower()})
+        end
+
+        function TabFunctions:AddConsole(ConsoleHeight)
+            local h = ConsoleHeight or 150
+            local ConFrame = Instance.new("Frame", TabPage)
+            ConFrame.Size = UDim2.new(1, 0, 0, h)
+            ConFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20); ConFrame.BackgroundTransparency = 0.2
+            Instance.new("UICorner", ConFrame).CornerRadius = UDim.new(0, 5)
+            local ConStroke = Instance.new("UIStroke", ConFrame)
+            ConStroke.Color = NoxvaLib.AccentColor; ConStroke.Thickness = 1; ConStroke.Transparency = 0.5
+
+            local TopCon = Instance.new("Frame", ConFrame)
+            TopCon.Size = UDim2.new(1, 0, 0, 25); TopCon.BackgroundColor3 = Color3.fromRGB(30, 30, 30); TopCon.BorderSizePixel = 0
+            Instance.new("UICorner", TopCon).CornerRadius = UDim.new(0, 5)
+            local FixBlocker = Instance.new("Frame", TopCon); FixBlocker.Size = UDim2.new(1, 0, 0, 5); FixBlocker.Position = UDim2.new(0, 0, 1, -5); FixBlocker.BackgroundColor3 = Color3.fromRGB(30, 30, 30); FixBlocker.BorderSizePixel = 0
+            
+            local ConTitle = Instance.new("TextLabel", TopCon)
+            ConTitle.Size = UDim2.new(0.5, 0, 1, 0); ConTitle.Position = UDim2.new(0, 10, 0, 0); ConTitle.BackgroundTransparency = 1
+            ConTitle.Text = "Terminal Log"; ConTitle.TextColor3 = Color3.fromRGB(200, 200, 200); ConTitle.Font = Enum.Font.GothamBold; ConTitle.TextSize = 11; ConTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+            local CopyBtn = Instance.new("TextButton", TopCon)
+            CopyBtn.Size = UDim2.new(0, 60, 0, 18); CopyBtn.Position = UDim2.new(1, -65, 0, 3.5); CopyBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+            CopyBtn.Text = "Copy All"; CopyBtn.TextColor3 = NoxvaLib.AccentColor; CopyBtn.Font = Enum.Font.GothamBold; CopyBtn.TextSize = 10
+            Instance.new("UICorner", CopyBtn).CornerRadius = UDim.new(0, 4)
+
+            local ScrollCon = Instance.new("ScrollingFrame", ConFrame)
+            ScrollCon.Size = UDim2.new(1, -10, 1, -30); ScrollCon.Position = UDim2.new(0, 5, 0, 25)
+            ScrollCon.BackgroundTransparency = 1; ScrollCon.ScrollBarThickness = 2; ScrollCon.ScrollBarImageColor3 = NoxvaLib.AccentColor
+            local SLayout = Instance.new("UIListLayout", ScrollCon)
+            SLayout.SortOrder = Enum.SortOrder.LayoutOrder; SLayout.Padding = UDim.new(0, 2)
+            
+            SLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                ScrollCon.CanvasSize = UDim2.new(0, 0, 0, SLayout.AbsoluteContentSize.Y + 5)
+                ScrollCon.CanvasPosition = Vector2.new(0, SLayout.AbsoluteContentSize.Y)
+            end)
+
+            local AllLogs = ""
+            CopyBtn.MouseButton1Click:Connect(function()
+                if setclipboard then
+                    setclipboard(AllLogs)
+                    WindowFunctions:Notify("CONSOLE", "Semua log berhasil disalin ke Clipboard!", 3)
+                else
+                    WindowFunctions:Notify("ERROR", "Executor lu gak support setclipboard!", 3)
+                end
+            end)
+
+            table.insert(SearchableElements, {Frame = ConFrame, Name = "console terminal log"})
+
+            local ConsoleFuncs = {}
+            function ConsoleFuncs:Log(msg)
+                local newLog = Instance.new("TextLabel", ScrollCon)
+                newLog.Size = UDim2.new(1, -5, 0, 0); newLog.AutomaticSize = Enum.AutomaticSize.Y
+                newLog.BackgroundTransparency = 1; newLog.Text = "> " .. tostring(msg)
+                newLog.TextColor3 = Color3.fromRGB(220, 220, 220); newLog.Font = Enum.Font.Code; newLog.TextSize = 11
+                newLog.TextWrapped = true; newLog.TextXAlignment = Enum.TextXAlignment.Left
+                AllLogs = AllLogs .. tostring(msg) .. "\n"
+            end
+            function ConsoleFuncs:Clear()
+                for _, v in pairs(ScrollCon:GetChildren()) do if v:IsA("TextLabel") then v:Destroy() end end
+                AllLogs = ""
+            end
+            return ConsoleFuncs
         end
 
         function TabFunctions:AddButton(BtnText, Callback)
@@ -345,7 +433,7 @@ function NoxvaLib:CreateWindow()
             local ToggleBtn = Instance.new("TextButton", TglFrame)
             ToggleBtn.Size = UDim2.new(1, 0, 1, 0); ToggleBtn.BackgroundTransparency = 1
             ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
-            ToggleBtn.TextColor3 = State and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(230, 230, 230)
+            ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
             ToggleBtn.Font = Enum.Font.GothamSemibold; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
             Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
             AddRipple(ToggleBtn)
@@ -355,9 +443,71 @@ function NoxvaLib:CreateWindow()
             
             ToggleBtn.MouseButton1Click:Connect(function()
                 State = not State; ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
-                ToggleBtn.TextColor3 = State and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(230, 230, 230); Callback(State)
+                ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); Callback(State)
                 if Flag then NoxvaLib.Flags[Flag].Value = State end
             end)
+            table.insert(SearchableElements, {Frame = TglFrame, Name = ToggleText:lower()})
+        end
+
+        function TabFunctions:AddHybridToggle(ToggleText, DefaultState, DefaultKey, Callback, Flag)
+            local State = DefaultState or false
+            local key = DefaultKey or Enum.KeyCode.E
+            if Flag and NoxvaLib.Flags[Flag] ~= nil then 
+                if type(NoxvaLib.Flags[Flag].Value) == "table" then
+                    State = NoxvaLib.Flags[Flag].Value.State
+                    key = NoxvaLib.Flags[Flag].Value.Key
+                else
+                    State = NoxvaLib.Flags[Flag].Value
+                end
+            end
+            
+            local TglFrame = Instance.new("Frame", TabPage)
+            TglFrame.Size = UDim2.new(1, 0, 0, 35); TglFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); TglFrame.BackgroundTransparency = 0.2
+            Instance.new("UICorner", TglFrame).CornerRadius = UDim.new(0, 5)
+            
+            local ToggleBtn = Instance.new("TextButton", TglFrame)
+            ToggleBtn.Size = UDim2.new(1, -60, 1, 0); ToggleBtn.BackgroundTransparency = 1
+            ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
+            ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
+            ToggleBtn.Font = Enum.Font.GothamSemibold; ToggleBtn.TextSize = 13; ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
+            AddRipple(ToggleBtn)
+
+            local BindBtn = Instance.new("TextButton", TglFrame)
+            BindBtn.Size = UDim2.new(0, 50, 0, 25); BindBtn.Position = UDim2.new(1, -60, 0, 5); BindBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+            BindBtn.Text = key.Name; BindBtn.TextColor3 = NoxvaLib.AccentColor; BindBtn.Font = Enum.Font.GothamBold; BindBtn.TextSize = 12
+            Instance.new("UICorner", BindBtn).CornerRadius = UDim.new(0, 5)
+            
+            if Flag then NoxvaLib.Flags[Flag] = {Value = {State = State, Key = key}, Func = Callback} end
+            if State then Callback(State) end
+            
+            local function UpdateToggle()
+                ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
+                ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
+                if Flag then NoxvaLib.Flags[Flag].Value = {State = State, Key = key} end
+                Callback(State)
+            end
+
+            ToggleBtn.MouseButton1Click:Connect(function()
+                State = not State
+                UpdateToggle()
+            end)
+
+            local isBinding = false
+            BindBtn.MouseButton1Click:Connect(function()
+                BindBtn.Text = "..."; isBinding = true
+            end)
+            
+            UserInputService.InputBegan:Connect(function(input, gameProcessed)
+                if isBinding and input.UserInputType == Enum.UserInputType.Keyboard then
+                    key = input.KeyCode; BindBtn.Text = key.Name; isBinding = false
+                    if Flag then NoxvaLib.Flags[Flag].Value = {State = State, Key = key} end
+                elseif not gameProcessed and input.KeyCode == key and not isBinding then
+                    State = not State
+                    UpdateToggle()
+                end
+            end)
+            
             table.insert(SearchableElements, {Frame = TglFrame, Name = ToggleText:lower()})
         end
 
@@ -368,7 +518,7 @@ function NoxvaLib:CreateWindow()
             local ctn = Instance.new("Frame", TabPage); ctn.Size = UDim2.new(1, 0, 0, 50); ctn.BackgroundColor3 = Color3.fromRGB(35, 35, 35); ctn.BackgroundTransparency = 0.2; Instance.new("UICorner", ctn).CornerRadius = UDim.new(0, 5)
             local lbl = Instance.new("TextLabel", ctn); lbl.Size = UDim2.new(1, -30, 0, 20); lbl.Position = UDim2.new(0, 15, 0, 5); lbl.BackgroundTransparency = 1; lbl.Text = txt .. " : " .. tostring(val); lbl.TextColor3 = Color3.fromRGB(230, 230, 230); lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
             local bg = Instance.new("TextButton", ctn); bg.Size = UDim2.new(1, -30, 0, 6); bg.Position = UDim2.new(0, 15, 0, 32); bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); bg.Text = ""; Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
-            local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = Color3.fromRGB(0, 120, 255); Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
+            local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = NoxvaLib.AccentColor; Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
             
             if Flag then NoxvaLib.Flags[Flag] = {Value = val, Func = Callback} end
             local d = false
@@ -397,7 +547,7 @@ function NoxvaLib:CreateWindow()
             
             local BindBtn = Instance.new("TextButton", BindFrame)
             BindBtn.Size = UDim2.new(0, 80, 0, 25); BindBtn.Position = UDim2.new(1, -95, 0, 5); BindBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-            BindBtn.Text = key.Name; BindBtn.TextColor3 = Color3.fromRGB(0, 120, 255); BindBtn.Font = Enum.Font.GothamBold; BindBtn.TextSize = 12
+            BindBtn.Text = key.Name; BindBtn.TextColor3 = NoxvaLib.AccentColor; BindBtn.Font = Enum.Font.GothamBold; BindBtn.TextSize = 12
             Instance.new("UICorner", BindBtn).CornerRadius = UDim.new(0, 5)
             
             local isBinding = false
@@ -455,6 +605,120 @@ function NoxvaLib:CreateWindow()
                 end)
             end
             if selected then Callback(selected) end
+            table.insert(SearchableElements, {Frame = DropdownFrame, Name = DropText:lower()})
+        end
+
+        function TabFunctions:AddPlayerDropdown(DropText, DefaultSelected, Callback, Flag)
+            local selected = DefaultSelected or "None"
+            if Flag and NoxvaLib.Flags[Flag] ~= nil then selected = NoxvaLib.Flags[Flag].Value end
+
+            local DropdownFrame = Instance.new("Frame", TabPage)
+            DropdownFrame.Size = UDim2.new(1, 0, 0, 35); DropdownFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); DropdownFrame.BackgroundTransparency = 0.2; DropdownFrame.ClipsDescendants = true
+            Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 5)
+            
+            local DropButton = Instance.new("TextButton", DropdownFrame)
+            DropButton.Size = UDim2.new(1, 0, 0, 35); DropButton.BackgroundTransparency = 1; DropButton.Text = DropText .. " :  " .. tostring(selected or ""); DropButton.TextColor3 = Color3.fromRGB(230, 230, 230); DropButton.Font = Enum.Font.GothamSemibold; DropButton.TextSize = 13; DropButton.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UIPadding", DropButton).PaddingLeft = UDim.new(0, 15)
+            AddRipple(DropButton)
+
+            local DropContainer = Instance.new("ScrollingFrame", DropdownFrame)
+            DropContainer.Size = UDim2.new(1, 0, 1, -35); DropContainer.Position = UDim2.new(0, 0, 0, 35); DropContainer.BackgroundTransparency = 1; DropContainer.ScrollBarThickness = 0
+            local Layout = Instance.new("UIListLayout", DropContainer)
+            Layout.SortOrder = Enum.SortOrder.LayoutOrder
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = selected, Func = Callback} end
+
+            local isOpen = false
+            DropButton.MouseButton1Click:Connect(function()
+                isOpen = not isOpen
+                if isOpen then
+                    for _, child in pairs(DropContainer:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+                    local playerList = game:GetService("Players"):GetPlayers()
+                    for _, player in ipairs(playerList) do
+                        local OptBtn = Instance.new("TextButton", DropContainer)
+                        OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = player.Name; OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200); OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                        Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
+                        AddRipple(OptBtn)
+                        OptBtn.MouseButton1Click:Connect(function()
+                            selected = player.Name
+                            DropButton.Text = DropText .. " :  " .. selected
+                            isOpen = false; DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+                            if Flag then NoxvaLib.Flags[Flag].Value = selected end
+                            Callback(selected)
+                        end)
+                    end
+                    local targetHeight = 35 + (#playerList * 30)
+                    DropdownFrame.Size = UDim2.new(1, 0, 0, math.clamp(targetHeight, 35, 150))
+                    DropContainer.CanvasSize = UDim2.new(0, 0, 0, #playerList * 30)
+                else 
+                    DropdownFrame.Size = UDim2.new(1, 0, 0, 35) 
+                end
+            end)
+            
+            if selected ~= "None" then Callback(selected) end
+            table.insert(SearchableElements, {Frame = DropdownFrame, Name = DropText:lower()})
+        end
+
+        function TabFunctions:AddMultiDropdown(DropText, Options, DefaultSelected, Callback, Flag)
+            local selectedTable = DefaultSelected or {}
+            if Flag and NoxvaLib.Flags[Flag] ~= nil then selectedTable = NoxvaLib.Flags[Flag].Value end
+
+            local DropdownFrame = Instance.new("Frame", TabPage)
+            DropdownFrame.Size = UDim2.new(1, 0, 0, 35); DropdownFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35); DropdownFrame.BackgroundTransparency = 0.2; DropdownFrame.ClipsDescendants = true
+            Instance.new("UICorner", DropdownFrame).CornerRadius = UDim.new(0, 5)
+            
+            local function GetSelectedString()
+                if #selectedTable == 0 then return "None" end
+                local str = ""
+                for i, v in ipairs(selectedTable) do str = str .. tostring(v) .. (i < #selectedTable and ", " or "") end
+                if string.len(str) > 25 then str = string.sub(str, 1, 22) .. "..." end
+                return str
+            end
+
+            local DropButton = Instance.new("TextButton", DropdownFrame)
+            DropButton.Size = UDim2.new(1, 0, 0, 35); DropButton.BackgroundTransparency = 1; DropButton.Text = DropText .. " :  " .. GetSelectedString(); DropButton.TextColor3 = Color3.fromRGB(230, 230, 230); DropButton.Font = Enum.Font.GothamSemibold; DropButton.TextSize = 13; DropButton.TextXAlignment = Enum.TextXAlignment.Left
+            Instance.new("UIPadding", DropButton).PaddingLeft = UDim.new(0, 15)
+            AddRipple(DropButton)
+
+            local DropContainer = Instance.new("ScrollingFrame", DropdownFrame)
+            DropContainer.Size = UDim2.new(1, 0, 1, -35); DropContainer.Position = UDim2.new(0, 0, 0, 35); DropContainer.BackgroundTransparency = 1; DropContainer.ScrollBarThickness = 0
+            Instance.new("UIListLayout", DropContainer).SortOrder = Enum.SortOrder.LayoutOrder
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = selectedTable, Func = Callback} end
+
+            local isOpen = false
+            DropButton.MouseButton1Click:Connect(function()
+                isOpen = not isOpen
+                if isOpen then
+                    local h = 35 + (#Options * 30); if h > 150 then h = 150 end
+                    DropdownFrame.Size = UDim2.new(1, 0, 0, h); DropContainer.CanvasSize = UDim2.new(0, 0, 0, #Options * 30)
+                else DropdownFrame.Size = UDim2.new(1, 0, 0, 35) end
+            end)
+
+            for _, option in ipairs(Options) do
+                local isOptSelected = table.find(selectedTable, option) ~= nil
+                local OptBtn = Instance.new("TextButton", DropContainer)
+                OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = tostring(option)
+                OptBtn.TextColor3 = isOptSelected and NoxvaLib.AccentColor or Color3.fromRGB(200, 200, 200)
+                OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
+                Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
+                AddRipple(OptBtn)
+                
+                OptBtn.MouseButton1Click:Connect(function()
+                    local index = table.find(selectedTable, option)
+                    if index then 
+                        table.remove(selectedTable, index)
+                        OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                    else 
+                        table.insert(selectedTable, option)
+                        OptBtn.TextColor3 = NoxvaLib.AccentColor
+                    end
+                    DropButton.Text = DropText .. " :  " .. GetSelectedString()
+                    if Flag then NoxvaLib.Flags[Flag].Value = selectedTable end
+                    Callback(selectedTable)
+                end)
+            end
+            if #selectedTable > 0 then Callback(selectedTable) end
             table.insert(SearchableElements, {Frame = DropdownFrame, Name = DropText:lower()})
         end
 
@@ -596,10 +860,10 @@ function NoxvaLib:CreateWindow()
             function FolderFuncs:AddToggle(txt, def, cb, flag)
                 local s = def or false; if flag and NoxvaLib.Flags[flag] ~= nil then s = NoxvaLib.Flags[flag].Value end
                 local frm = Instance.new("Frame", ItemContainer); frm.Size = UDim2.new(1, -20, 0, 35); frm.Position = UDim2.new(0, 10, 0, 0); frm.BackgroundColor3 = Color3.fromRGB(40, 40, 40); frm.BackgroundTransparency = 0.5; Instance.new("UICorner", frm).CornerRadius = UDim.new(0, 5)
-                local btn = Instance.new("TextButton", frm); btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13; btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 15)
+                local btn = Instance.new("TextButton", frm); btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13; btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 15)
                 AddRipple(btn)
                 if flag then NoxvaLib.Flags[flag] = {Value = s, Func = cb} end
-                if s then cb(s) end; btn.MouseButton1Click:Connect(function() s = not s; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and Color3.fromRGB(0, 255, 150) or Color3.fromRGB(230, 230, 230); if flag then NoxvaLib.Flags[flag].Value = s end; cb(s) end)
+                if s then cb(s) end; btn.MouseButton1Click:Connect(function() s = not s; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); if flag then NoxvaLib.Flags[flag].Value = s end; cb(s) end)
             end
             function FolderFuncs:AddButton(txt, cb)
                 local frm = Instance.new("Frame", ItemContainer); frm.Size = UDim2.new(1, -20, 0, 35); frm.Position = UDim2.new(0, 10, 0, 0); frm.BackgroundColor3 = Color3.fromRGB(40, 40, 40); frm.BackgroundTransparency = 0.5; Instance.new("UICorner", frm).CornerRadius = UDim.new(0, 5)
@@ -611,7 +875,7 @@ function NoxvaLib:CreateWindow()
                 local ctn = Instance.new("Frame", ItemContainer); ctn.Size = UDim2.new(1, -20, 0, 50); ctn.Position = UDim2.new(0, 10, 0, 0); ctn.BackgroundColor3 = Color3.fromRGB(40, 40, 40); ctn.BackgroundTransparency = 0.5; Instance.new("UICorner", ctn).CornerRadius = UDim.new(0, 5)
                 local lbl = Instance.new("TextLabel", ctn); lbl.Size = UDim2.new(1, -30, 0, 20); lbl.Position = UDim2.new(0, 15, 0, 5); lbl.BackgroundTransparency = 1; lbl.Text = txt .. " : " .. tostring(val); lbl.TextColor3 = Color3.fromRGB(230, 230, 230); lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
                 local bg = Instance.new("TextButton", ctn); bg.Size = UDim2.new(1, -30, 0, 6); bg.Position = UDim2.new(0, 15, 0, 32); bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); bg.Text = ""; Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
-                local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = Color3.fromRGB(0, 120, 255); Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
+                local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = NoxvaLib.AccentColor; Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
                 if flag then NoxvaLib.Flags[flag] = {Value = val, Func = cb} end
                 local d = false; local function upd(i) local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1); val = math.floor(min + (max - min) * p); fl.Size = UDim2.new(p, 0, 1, 0); lbl.Text = txt .. " : " .. tostring(val); if flag then NoxvaLib.Flags[flag].Value = val end; cb(val) end
                 bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; upd(i) end end)
@@ -656,6 +920,9 @@ function NoxvaLib:CreateWindow()
                             if type(value) == "table" and value.IsColor then
                                 NoxvaLib.Flags[flagName].Value = Color3.new(value.R, value.G, value.B)
                                 if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(Color3.new(value.R, value.G, value.B)) end
+                            elseif type(value) == "table" and value.State ~= nil and value.Key ~= nil then
+                                NoxvaLib.Flags[flagName].Value = value
+                                if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(value.State) end
                             else
                                 NoxvaLib.Flags[flagName].Value = value
                                 if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(value) end
