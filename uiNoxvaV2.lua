@@ -1,6 +1,6 @@
 -- ==========================================
--- NOXVA UI ENGINE | PURE CORE LIBRARY V2.7
--- DEVELOPED BY DANZY (COMPACT SIZE + ROUNDED LOGO + WEBHOOK + FPS LOCKED LEFT)
+-- NOXVA UI ENGINE | PURE CORE LIBRARY V2.8
+-- DEVELOPED BY DANZY (COMPACT + ROUNDED LOGO + WEBHOOK + MULTI-SAVE ISOLATION)
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} 
@@ -80,7 +80,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     local LogoImage = Instance.new("ImageLabel", OpenLogo)
     LogoImage.Size = UDim2.new(1, 0, 1, 0)
     LogoImage.BackgroundTransparency = 1
-    -- FIX: Link gambar pure rbxassetid biar muncul!
     LogoImage.Image = "rbxassetid://125602638236059" 
     LogoImage.ScaleType = Enum.ScaleType.Fit 
     Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(0, 8)
@@ -147,7 +146,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             pcall(function() currentPing = math.round(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) end)
             local statText = "FPS: " .. frames .. " | Ping: " .. currentPing .. "ms"
             TopBarStats.Text = statText
-            FloatingStats.Text = statText -- Update yang di pojok kiri atas
+            FloatingStats.Text = statText 
             frames = 0; lastUpdate = tick()
         end
     end)
@@ -250,7 +249,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
         end)
     end
 
-    -- [NEW] FITUR WEBHOOK SUPPORT
     function WindowFunctions:SendWebhook(WebhookURL, EmbedData)
         local requestFunc = (syn and syn.request) or (http and http.request) or http_request or (fluxus and fluxus.request) or request
         if not requestFunc then
@@ -343,7 +341,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             return LabelItem
         end
 
-        -- [NEW] FITUR PARAGRAPH ALA SERAPHIN (BISA MELAR)
         function TabFunctions:AddParagraph(TitleText, DescText)
             local ParaFrame = Instance.new("Frame", TabPage)
             ParaFrame.Size = UDim2.new(1, 0, 0, 0)
@@ -982,7 +979,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
 
             local FolderFuncs = {}
             
-            -- [NEW] PARAGRAPH DI DALAM FOLDER
             function FolderFuncs:AddParagraph(TitleTxt, DescTxt)
                 local ParaFrame = Instance.new("Frame", ItemContainer); ParaFrame.Size = UDim2.new(1, -20, 0, 0); ParaFrame.AutomaticSize = Enum.AutomaticSize.Y; ParaFrame.Position = UDim2.new(0, 10, 0, 0); ParaFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40); ParaFrame.BackgroundTransparency = 0.5; Instance.new("UICorner", ParaFrame).CornerRadius = UDim.new(0, 5)
                 local LblUIList = Instance.new("UIListLayout", ParaFrame); LblUIList.SortOrder = Enum.SortOrder.LayoutOrder; LblUIList.Padding = UDim.new(0, 5)
@@ -1042,10 +1038,23 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
         return TabFunctions
     end
 
+    -- ==========================================
+    -- NEW CONFIG TAB: MULTI-SAVE & GAME ISOLATION
+    -- ==========================================
     function WindowFunctions:MakeConfigTab()
         local ConfTab = WindowFunctions:MakeTab("⚙️ Settings")
+        local GameFolder = "NoxvaHub/Configs/" .. tostring(game.PlaceId)
         
-        ConfTab:AddLabel("🎨 Theme & Personalization")
+        -- Cek & Bikin Folder Khusus Game Ini
+        if makefolder then
+            pcall(function()
+                makefolder("NoxvaHub")
+                makefolder("NoxvaHub/Configs")
+                makefolder(GameFolder)
+            end)
+        end
+
+        ConfTab:AddSection("THEME CUSTOMIZATION")
         ConfTab:AddColorPicker("UI Theme Color", NoxvaLib.AccentColor, function(newColor)
             local oldColor = NoxvaLib.AccentColor
             NoxvaLib.AccentColor = newColor
@@ -1064,10 +1073,16 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             end
         end, "HubThemeColor")
 
-        ConfTab:AddLabel("💾 Data Management")
-        ConfTab:AddLabel("Konfigurasi Data akan disimpan di Folder Executor lu.")
+        ConfTab:AddSection("MULTI-CONFIG MANAGER")
         
-        ConfTab:AddButton("Save Settings", function()
+        local SelectedConfig = "Default"
+        ConfTab:AddTextbox("Config Name", "Ketik nama config...", function(t)
+            if t ~= "" then
+                SelectedConfig = t
+            end
+        end)
+
+        ConfTab:AddButton("💾 Save Current Config", function()
             local dataToSave = {}
             for flagName, data in pairs(NoxvaLib.Flags) do 
                 if typeof(data.Value) == "Color3" then
@@ -1080,16 +1095,41 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             end
             local success, json = pcall(function() return HttpService:JSONEncode(dataToSave) end)
             if success and writefile then
-                writefile("NoxvaHub_Config.json", json)
-                WindowFunctions:Notify("CONFIG", "Settings Saved Successfully!", 3)
+                local path = GameFolder .. "/" .. SelectedConfig .. ".json"
+                writefile(path, json)
+                WindowFunctions:Notify("CONFIG", "Tersimpan: '"..SelectedConfig.."' (Game ID: "..tostring(game.PlaceId)..")", 3)
             else
-                WindowFunctions:Notify("ERROR", "Gagal disave. Executor lu gak support writefile!", 3)
+                WindowFunctions:Notify("ERROR", "Executor lu gak support writefile!", 3)
             end
         end)
+
+        ConfTab:AddLabel("Select Config to Load:")
         
-        ConfTab:AddButton("Load Settings", function()
-            if readfile and isfile and isfile("NoxvaHub_Config.json") then
-                local success, json = pcall(function() return readfile("NoxvaHub_Config.json") end)
+        local function GetConfigs()
+            local list = {}
+            if listfiles then
+                local success, files = pcall(function() return listfiles(GameFolder) end)
+                if success and files then
+                    for _, file in pairs(files) do
+                        if file:sub(-5) == ".json" then
+                            local name = file:match("([^/]+)%.json$") or file:match("([^\\]+)%.json$")
+                            if name then table.insert(list, name) end
+                        end
+                    end
+                end
+            end
+            if #list == 0 then table.insert(list, "Belum Ada Config") end
+            return list
+        end
+
+        local ConfigDrop = ConfTab:AddDropdown("Stored Configs", GetConfigs(), function(v)
+            SelectedConfig = v
+        end)
+
+        ConfTab:AddDoubleButton("Load Selected", function()
+            local path = GameFolder .. "/" .. SelectedConfig .. ".json"
+            if readfile and isfile and isfile(path) then
+                local success, json = pcall(function() return readfile(path) end)
                 if success then
                     local data = HttpService:JSONDecode(json)
                     for flagName, value in pairs(data) do
@@ -1104,11 +1144,13 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                             end
                         end
                     end
-                    WindowFunctions:Notify("CONFIG", "Settings Loaded!", 4)
+                    WindowFunctions:Notify("CONFIG", "Loaded: "..SelectedConfig, 3)
                 end
             else
-                WindowFunctions:Notify("ERROR", "File Save belum ada!", 3)
+                WindowFunctions:Notify("ERROR", "File not found!", 3)
             end
+        end, "Refresh List", function()
+            WindowFunctions:Notify("INFO", "Re-execute script untuk memuat ulang daftar config.", 3)
         end)
     end
 
