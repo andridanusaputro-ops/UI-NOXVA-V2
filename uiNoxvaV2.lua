@@ -19,17 +19,30 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     local TweenService = game:GetService("TweenService")
     local HttpService = game:GetService("HttpService")
     local Players = game:GetService("Players")
-
-    if gethui then
-        if gethui():FindFirstChild("NoxvaHub_Pure") then gethui().NoxvaHub_Pure:Destroy() end
-    else
-        if CoreGui:FindFirstChild("NoxvaHub_Pure") then CoreGui.NoxvaHub_Pure:Destroy() end
-    end
+    local LocalPlayer = Players.LocalPlayer
 
     local NoxvaUI = Instance.new("ScreenGui")
     NoxvaUI.Name = "NoxvaHub_Pure"
     NoxvaUI.ResetOnSpawn = false 
-    if gethui then NoxvaUI.Parent = gethui() else pcall(function() NoxvaUI.Parent = CoreGui end) end
+
+    -- [[ PERBAIKAN SISTEM GUI KHUSUS DELTA/MOBILE ]]
+    local successHui, hui = pcall(function() return gethui() end)
+    local targetParent
+    if successHui and hui then
+        targetParent = hui
+    elseif pcall(function() return CoreGui.Name end) then
+        targetParent = CoreGui
+    elseif LocalPlayer and LocalPlayer:FindFirstChild("PlayerGui") then
+        targetParent = LocalPlayer.PlayerGui
+    end
+
+    if targetParent then
+        local oldUI = targetParent:FindFirstChild("NoxvaHub_Pure")
+        if oldUI then oldUI:Destroy() end
+        NoxvaUI.Parent = targetParent
+    else
+        return nil
+    end
 
     local NotifContainer = Instance.new("Frame", NoxvaUI)
     NotifContainer.Name = "NotifContainer"
@@ -202,12 +215,14 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     function WindowFunctions:EnableAntiAFK()
         if getgenv().NoxvaAntiAFKLoaded then return end
         getgenv().NoxvaAntiAFKLoaded = true
-        local VirtualUser = game:GetService("VirtualUser")
-        Players.LocalPlayer.Idled:Connect(function()
-            VirtualUser:CaptureController()
-            VirtualUser:ClickButton2(Vector2.new())
-        end)
-        self:Notify("SYSTEM", "Anti-AFK Aktif! Lu aman dari kick 20 menit.", 3)
+        if LocalPlayer then
+            LocalPlayer.Idled:Connect(function()
+                local VirtualUser = game:GetService("VirtualUser")
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton2(Vector2.new())
+            end)
+            self:Notify("SYSTEM", "Anti-AFK Aktif! Lu aman dari kick 20 menit.", 3)
+        end
     end
 
     function WindowFunctions:Notify(Title, Text, Duration)
@@ -438,14 +453,18 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             Instance.new("UIPadding", ToggleBtn).PaddingLeft = UDim.new(0, 15)
             AddRipple(ToggleBtn)
             
-            if Flag then NoxvaLib.Flags[Flag] = {Value = State, Func = Callback} end
+            local function UpdateVisual(newState)
+                State = newState
+                ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
+                ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
+                if Flag then NoxvaLib.Flags[Flag].Value = State end
+                Callback(State)
+            end
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = State, Func = Callback, Set = UpdateVisual} end
             if State then Callback(State) end
             
-            ToggleBtn.MouseButton1Click:Connect(function()
-                State = not State; ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
-                ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); Callback(State)
-                if Flag then NoxvaLib.Flags[Flag].Value = State end
-            end)
+            ToggleBtn.MouseButton1Click:Connect(function() UpdateVisual(not State) end)
             table.insert(SearchableElements, {Frame = TglFrame, Name = ToggleText:lower()})
         end
 
@@ -478,20 +497,19 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             BindBtn.Text = key.Name; BindBtn.TextColor3 = NoxvaLib.AccentColor; BindBtn.Font = Enum.Font.GothamBold; BindBtn.TextSize = 12
             Instance.new("UICorner", BindBtn).CornerRadius = UDim.new(0, 5)
             
-            if Flag then NoxvaLib.Flags[Flag] = {Value = {State = State, Key = key}, Func = Callback} end
-            if State then Callback(State) end
-            
-            local function UpdateToggle()
+            local function UpdateVisual(vObj)
+                State = vObj.State; key = vObj.Key
                 ToggleBtn.Text = ToggleText .. "   |   " .. (State and "ON" or "OFF")
                 ToggleBtn.TextColor3 = State and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230)
+                BindBtn.Text = key.Name
                 if Flag then NoxvaLib.Flags[Flag].Value = {State = State, Key = key} end
                 Callback(State)
             end
 
-            ToggleBtn.MouseButton1Click:Connect(function()
-                State = not State
-                UpdateToggle()
-            end)
+            if Flag then NoxvaLib.Flags[Flag] = {Value = {State = State, Key = key}, Func = Callback, Set = UpdateVisual} end
+            if State then Callback(State) end
+
+            ToggleBtn.MouseButton1Click:Connect(function() UpdateVisual({State = not State, Key = key}) end)
 
             local isBinding = false
             BindBtn.MouseButton1Click:Connect(function()
@@ -500,11 +518,9 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             
             UserInputService.InputBegan:Connect(function(input, gameProcessed)
                 if isBinding and input.UserInputType == Enum.UserInputType.Keyboard then
-                    key = input.KeyCode; BindBtn.Text = key.Name; isBinding = false
-                    if Flag then NoxvaLib.Flags[Flag].Value = {State = State, Key = key} end
+                    isBinding = false; UpdateVisual({State = State, Key = input.KeyCode})
                 elseif not gameProcessed and input.KeyCode == key and not isBinding then
-                    State = not State
-                    UpdateToggle()
+                    UpdateVisual({State = not State, Key = key})
                 end
             end)
             
@@ -520,16 +536,20 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             local bg = Instance.new("TextButton", ctn); bg.Size = UDim2.new(1, -30, 0, 6); bg.Position = UDim2.new(0, 15, 0, 32); bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); bg.Text = ""; Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
             local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = NoxvaLib.AccentColor; Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
             
-            if Flag then NoxvaLib.Flags[Flag] = {Value = val, Func = Callback} end
-            local d = false
-            local function upd(i) 
-                local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
-                val = math.floor(min + (max - min) * p); fl.Size = UDim2.new(p, 0, 1, 0); lbl.Text = txt .. " : " .. tostring(val)
+            local function UpdateVisual(newVal)
+                val = math.clamp(math.floor(newVal), min, max)
+                local p = (val - min) / (max - min)
+                fl.Size = UDim2.new(p, 0, 1, 0)
+                lbl.Text = txt .. " : " .. tostring(val)
                 if Flag then NoxvaLib.Flags[Flag].Value = val end
-                Callback(val) 
+                Callback(val)
             end
-            bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; upd(i) end end)
-            UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then upd(i) end end)
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = val, Func = Callback, Set = UpdateVisual} end
+            
+            local d = false
+            bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; UpdateVisual(min + (max - min) * math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)) end end)
+            UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then UpdateVisual(min + (max - min) * math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)) end end)
             UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
             Callback(val)
             table.insert(SearchableElements, {Frame = ctn, Name = txt:lower()})
@@ -581,9 +601,18 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             DropContainer.Size = UDim2.new(1, 0, 1, -35); DropContainer.Position = UDim2.new(0, 0, 0, 35); DropContainer.BackgroundTransparency = 1; DropContainer.ScrollBarThickness = 0
             Instance.new("UIListLayout", DropContainer).SortOrder = Enum.SortOrder.LayoutOrder
 
-            if Flag then NoxvaLib.Flags[Flag] = {Value = selected, Func = Callback} end
-
             local isOpen = false
+            
+            local function UpdateVisual(newVal)
+                selected = newVal
+                DropButton.Text = DropText .. " :  " .. tostring(selected)
+                isOpen = false; DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+                if Flag then NoxvaLib.Flags[Flag].Value = selected end
+                Callback(selected)
+            end
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = selected, Func = Callback, Set = UpdateVisual} end
+
             DropButton.MouseButton1Click:Connect(function()
                 isOpen = not isOpen
                 if isOpen then
@@ -597,12 +626,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = tostring(option); OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200); OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
                 Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
                 AddRipple(OptBtn)
-                OptBtn.MouseButton1Click:Connect(function()
-                    DropButton.Text = DropText .. " :  " .. tostring(option)
-                    isOpen = false; DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
-                    if Flag then NoxvaLib.Flags[Flag].Value = option end
-                    Callback(option)
-                end)
+                OptBtn.MouseButton1Click:Connect(function() UpdateVisual(option) end)
             end
             if selected then Callback(selected) end
             table.insert(SearchableElements, {Frame = DropdownFrame, Name = DropText:lower()})
@@ -626,9 +650,17 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             local Layout = Instance.new("UIListLayout", DropContainer)
             Layout.SortOrder = Enum.SortOrder.LayoutOrder
 
-            if Flag then NoxvaLib.Flags[Flag] = {Value = selected, Func = Callback} end
-
             local isOpen = false
+            local function UpdateVisual(newVal)
+                selected = newVal
+                DropButton.Text = DropText .. " :  " .. tostring(selected)
+                isOpen = false; DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
+                if Flag then NoxvaLib.Flags[Flag].Value = selected end
+                Callback(selected)
+            end
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = selected, Func = Callback, Set = UpdateVisual} end
+
             DropButton.MouseButton1Click:Connect(function()
                 isOpen = not isOpen
                 if isOpen then
@@ -639,13 +671,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                         OptBtn.Size = UDim2.new(1, 0, 0, 30); OptBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45); OptBtn.BackgroundTransparency = 0.5; OptBtn.Text = player.Name; OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200); OptBtn.Font = Enum.Font.Gotham; OptBtn.TextSize = 13; OptBtn.BorderSizePixel = 0; OptBtn.TextXAlignment = Enum.TextXAlignment.Left
                         Instance.new("UIPadding", OptBtn).PaddingLeft = UDim.new(0, 25)
                         AddRipple(OptBtn)
-                        OptBtn.MouseButton1Click:Connect(function()
-                            selected = player.Name
-                            DropButton.Text = DropText .. " :  " .. selected
-                            isOpen = false; DropdownFrame.Size = UDim2.new(1, 0, 0, 35)
-                            if Flag then NoxvaLib.Flags[Flag].Value = selected end
-                            Callback(selected)
-                        end)
+                        OptBtn.MouseButton1Click:Connect(function() UpdateVisual(player.Name) end)
                     end
                     local targetHeight = 35 + (#playerList * 30)
                     DropdownFrame.Size = UDim2.new(1, 0, 0, math.clamp(targetHeight, 35, 150))
@@ -684,7 +710,25 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             DropContainer.Size = UDim2.new(1, 0, 1, -35); DropContainer.Position = UDim2.new(0, 0, 0, 35); DropContainer.BackgroundTransparency = 1; DropContainer.ScrollBarThickness = 0
             Instance.new("UIListLayout", DropContainer).SortOrder = Enum.SortOrder.LayoutOrder
 
-            if Flag then NoxvaLib.Flags[Flag] = {Value = selectedTable, Func = Callback} end
+            local function UpdateVisual(newTable)
+                selectedTable = newTable or {}
+                DropButton.Text = DropText .. " :  " .. GetSelectedString()
+                
+                for _, btn in pairs(DropContainer:GetChildren()) do
+                    if btn:IsA("TextButton") then
+                        if table.find(selectedTable, btn.Text) then
+                            btn.TextColor3 = NoxvaLib.AccentColor
+                        else
+                            btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                        end
+                    end
+                end
+                
+                if Flag then NoxvaLib.Flags[Flag].Value = selectedTable end
+                Callback(selectedTable)
+            end
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = selectedTable, Func = Callback, Set = UpdateVisual} end
 
             local isOpen = false
             DropButton.MouseButton1Click:Connect(function()
@@ -708,14 +752,10 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                     local index = table.find(selectedTable, option)
                     if index then 
                         table.remove(selectedTable, index)
-                        OptBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
                     else 
                         table.insert(selectedTable, option)
-                        OptBtn.TextColor3 = NoxvaLib.AccentColor
                     end
-                    DropButton.Text = DropText .. " :  " .. GetSelectedString()
-                    if Flag then NoxvaLib.Flags[Flag].Value = selectedTable end
-                    Callback(selectedTable)
+                    UpdateVisual(selectedTable)
                 end)
             end
             if #selectedTable > 0 then Callback(selectedTable) end
@@ -735,13 +775,17 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
             TextBox.Size = UDim2.new(0.55, -20, 0, 28); TextBox.Position = UDim2.new(0.45, 5, 0, 6); TextBox.BackgroundColor3 = Color3.fromRGB(20, 20, 20); TextBox.PlaceholderText = Placeholder; TextBox.Text = val; TextBox.TextColor3 = Color3.fromRGB(255, 255, 255); TextBox.Font = Enum.Font.Gotham; TextBox.TextSize = 12
             Instance.new("UICorner", TextBox).CornerRadius = UDim.new(0, 5)
             
-            if Flag then NoxvaLib.Flags[Flag] = {Value = val, Func = Callback} end
+            local function UpdateVisual(newVal)
+                val = newVal
+                TextBox.Text = val
+                if Flag then NoxvaLib.Flags[Flag].Value = val end
+                Callback(val)
+            end
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = val, Func = Callback, Set = UpdateVisual} end
             if val ~= "" then Callback(val) end
 
-            TextBox.FocusLost:Connect(function() 
-                if Flag then NoxvaLib.Flags[Flag].Value = TextBox.Text end
-                Callback(TextBox.Text) 
-            end)
+            TextBox.FocusLost:Connect(function() UpdateVisual(TextBox.Text) end)
             table.insert(SearchableElements, {Frame = BoxFrame, Name = BoxText:lower()})
         end
 
@@ -780,7 +824,18 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 PickerFrame.Size = isOpen and UDim2.new(1, 0, 0, 115) or UDim2.new(1, 0, 0, 35)
             end)
 
-            if Flag then NoxvaLib.Flags[Flag] = {Value = color, Func = Callback} end
+            local bgR, fillR, bgG, fillG, bgB, fillB
+
+            local function UpdateVisual(newColor)
+                color = newColor; ColorPreview.BackgroundColor3 = color
+                if fillR then fillR.Size = UDim2.new(color.R, 0, 1, 0) end
+                if fillG then fillG.Size = UDim2.new(color.G, 0, 1, 0) end
+                if fillB then fillB.Size = UDim2.new(color.B, 0, 1, 0) end
+                if Flag then NoxvaLib.Flags[Flag].Value = color end
+                Callback(color)
+            end
+
+            if Flag then NoxvaLib.Flags[Flag] = {Value = color, Func = Callback, Set = UpdateVisual} end
 
             local function CreateRGB(yPos, cName, initVal)
                 local lbl = Instance.new("TextLabel", ExpandArea)
@@ -799,19 +854,15 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 return bg, fill
             end
 
-            local bgR, fillR = CreateRGB(10, "R", color.R)
-            local bgG, fillG = CreateRGB(35, "G", color.G)
-            local bgB, fillB = CreateRGB(60, "B", color.B)
+            bgR, fillR = CreateRGB(10, "R", color.R)
+            bgG, fillG = CreateRGB(35, "G", color.G)
+            bgB, fillB = CreateRGB(60, "B", color.B)
 
             local function HookColor(bg, fill)
                 local d = false
                 local function upd(i)
                     local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
-                    fill.Size = UDim2.new(p, 0, 1, 0)
-                    color = Color3.new(fillR.Size.X.Scale, fillG.Size.X.Scale, fillB.Size.X.Scale)
-                    ColorPreview.BackgroundColor3 = color
-                    if Flag then NoxvaLib.Flags[Flag].Value = color end
-                    Callback(color)
+                    UpdateVisual(Color3.new(fillR.Size.X.Scale, fillG.Size.X.Scale, fillB.Size.X.Scale))
                 end
                 bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; upd(i) end end)
                 UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then upd(i) end end)
@@ -857,29 +908,41 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 local LPad = Instance.new("UIPadding", LblText); LPad.PaddingLeft = UDim.new(0, 15); LPad.PaddingRight = UDim.new(0, 15); LPad.PaddingTop = UDim.new(0, 8); LPad.PaddingBottom = UDim.new(0, 8)
                 local LItem = {}; function LItem:SetText(t) LblText.Text = t end; return LItem
             end
+            
             function FolderFuncs:AddToggle(txt, def, cb, flag)
                 local s = def or false; if flag and NoxvaLib.Flags[flag] ~= nil then s = NoxvaLib.Flags[flag].Value end
                 local frm = Instance.new("Frame", ItemContainer); frm.Size = UDim2.new(1, -20, 0, 35); frm.Position = UDim2.new(0, 10, 0, 0); frm.BackgroundColor3 = Color3.fromRGB(40, 40, 40); frm.BackgroundTransparency = 0.5; Instance.new("UICorner", frm).CornerRadius = UDim.new(0, 5)
-                local btn = Instance.new("TextButton", frm); btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13; btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 15)
-                AddRipple(btn)
-                if flag then NoxvaLib.Flags[flag] = {Value = s, Func = cb} end
-                if s then cb(s) end; btn.MouseButton1Click:Connect(function() s = not s; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); if flag then NoxvaLib.Flags[flag].Value = s end; cb(s) end)
+                local btn = Instance.new("TextButton", frm); btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13; btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 15); AddRipple(btn)
+                
+                local function UpdateVisual(newState)
+                    s = newState; btn.Text = txt .. "   |   " .. (s and "ON" or "OFF"); btn.TextColor3 = s and NoxvaLib.AccentColor or Color3.fromRGB(230, 230, 230); if flag then NoxvaLib.Flags[flag].Value = s end; cb(s)
+                end
+                
+                if flag then NoxvaLib.Flags[flag] = {Value = s, Func = cb, Set = UpdateVisual} end
+                if s then cb(s) end
+                btn.MouseButton1Click:Connect(function() UpdateVisual(not s) end)
             end
+            
             function FolderFuncs:AddButton(txt, cb)
                 local frm = Instance.new("Frame", ItemContainer); frm.Size = UDim2.new(1, -20, 0, 35); frm.Position = UDim2.new(0, 10, 0, 0); frm.BackgroundColor3 = Color3.fromRGB(40, 40, 40); frm.BackgroundTransparency = 0.5; Instance.new("UICorner", frm).CornerRadius = UDim.new(0, 5)
-                local btn = Instance.new("TextButton", frm); btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = txt; btn.TextColor3 = Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13; btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 15)
-                AddRipple(btn); btn.MouseButton1Click:Connect(function() cb() end)
+                local btn = Instance.new("TextButton", frm); btn.Size = UDim2.new(1, 0, 1, 0); btn.BackgroundTransparency = 1; btn.Text = txt; btn.TextColor3 = Color3.fromRGB(230, 230, 230); btn.Font = Enum.Font.GothamSemibold; btn.TextSize = 13; btn.TextXAlignment = Enum.TextXAlignment.Left; Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 15); AddRipple(btn); btn.MouseButton1Click:Connect(function() cb() end)
             end
+            
             function FolderFuncs:AddSlider(txt, min, max, def, cb, flag)
                 local val = def or min; if flag and NoxvaLib.Flags[flag] ~= nil then val = NoxvaLib.Flags[flag].Value end
                 local ctn = Instance.new("Frame", ItemContainer); ctn.Size = UDim2.new(1, -20, 0, 50); ctn.Position = UDim2.new(0, 10, 0, 0); ctn.BackgroundColor3 = Color3.fromRGB(40, 40, 40); ctn.BackgroundTransparency = 0.5; Instance.new("UICorner", ctn).CornerRadius = UDim.new(0, 5)
                 local lbl = Instance.new("TextLabel", ctn); lbl.Size = UDim2.new(1, -30, 0, 20); lbl.Position = UDim2.new(0, 15, 0, 5); lbl.BackgroundTransparency = 1; lbl.Text = txt .. " : " .. tostring(val); lbl.TextColor3 = Color3.fromRGB(230, 230, 230); lbl.Font = Enum.Font.GothamSemibold; lbl.TextSize = 12; lbl.TextXAlignment = Enum.TextXAlignment.Left
                 local bg = Instance.new("TextButton", ctn); bg.Size = UDim2.new(1, -30, 0, 6); bg.Position = UDim2.new(0, 15, 0, 32); bg.BackgroundColor3 = Color3.fromRGB(20, 20, 20); bg.Text = ""; Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
                 local fl = Instance.new("Frame", bg); fl.Size = UDim2.new((val - min)/(max - min), 0, 1, 0); fl.BackgroundColor3 = NoxvaLib.AccentColor; Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
-                if flag then NoxvaLib.Flags[flag] = {Value = val, Func = cb} end
-                local d = false; local function upd(i) local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1); val = math.floor(min + (max - min) * p); fl.Size = UDim2.new(p, 0, 1, 0); lbl.Text = txt .. " : " .. tostring(val); if flag then NoxvaLib.Flags[flag].Value = val end; cb(val) end
-                bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; upd(i) end end)
-                UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then upd(i) end end)
+                
+                local function UpdateVisual(newVal)
+                    val = math.clamp(math.floor(newVal), min, max); local p = (val - min) / (max - min); fl.Size = UDim2.new(p, 0, 1, 0); lbl.Text = txt .. " : " .. tostring(val); if flag then NoxvaLib.Flags[flag].Value = val end; cb(val)
+                end
+                
+                if flag then NoxvaLib.Flags[flag] = {Value = val, Func = cb, Set = UpdateVisual} end
+                local d = false
+                bg.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = true; UpdateVisual(min + (max - min) * math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)) end end)
+                UserInputService.InputChanged:Connect(function(i) if d and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then UpdateVisual(min + (max - min) * math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)) end end)
                 UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then d = false end end)
                 cb(val)
             end
@@ -891,12 +954,36 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
 
     function WindowFunctions:MakeConfigTab()
         local ConfTab = WindowFunctions:MakeTab("⚙️ Settings")
+        
+        ConfTab:AddLabel("🎨 Theme & Personalization")
+        ConfTab:AddColorPicker("UI Theme Color", NoxvaLib.AccentColor, function(newColor)
+            local oldColor = NoxvaLib.AccentColor
+            NoxvaLib.AccentColor = newColor
+            for _, element in pairs(NoxvaUI:GetDescendants()) do
+                pcall(function()
+                    if element:IsA("UIStroke") and element.Color == oldColor then
+                        element.Color = newColor
+                    elseif (element:IsA("TextLabel") or element:IsA("TextButton")) and element.TextColor3 == oldColor then
+                        element.TextColor3 = newColor
+                    elseif element:IsA("ScrollingFrame") and element.ScrollBarImageColor3 == oldColor then
+                        element.ScrollBarImageColor3 = newColor
+                    elseif element:IsA("Frame") and element.BackgroundColor3 == oldColor then
+                        element.BackgroundColor3 = newColor
+                    end
+                end)
+            end
+        end, "HubThemeColor")
+
+        ConfTab:AddLabel("💾 Data Management")
         ConfTab:AddLabel("Konfigurasi Data akan disimpan di Folder Executor lu.")
+        
         ConfTab:AddButton("Save Settings", function()
             local dataToSave = {}
             for flagName, data in pairs(NoxvaLib.Flags) do 
                 if typeof(data.Value) == "Color3" then
                     dataToSave[flagName] = {R = data.Value.R, G = data.Value.G, B = data.Value.B, IsColor = true}
+                elseif type(data.Value) == "table" and data.Value.Key ~= nil then
+                    dataToSave[flagName] = {State = data.Value.State, Key = data.Value.Key.Name} 
                 else
                     dataToSave[flagName] = data.Value 
                 end
@@ -906,7 +993,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 writefile("NoxvaHub_Config.json", json)
                 WindowFunctions:Notify("CONFIG", "Settings Saved Successfully!", 3)
             else
-                WindowFunctions:Notify("ERROR", "Executor does not support writefile!", 3)
+                WindowFunctions:Notify("ERROR", "Gagal disave. Executor lu gak support writefile!", 3)
             end
         end)
         
@@ -916,23 +1003,21 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 if success then
                     local data = HttpService:JSONDecode(json)
                     for flagName, value in pairs(data) do
-                        if NoxvaLib.Flags[flagName] then
+                        if NoxvaLib.Flags[flagName] and NoxvaLib.Flags[flagName].Set then
                             if type(value) == "table" and value.IsColor then
-                                NoxvaLib.Flags[flagName].Value = Color3.new(value.R, value.G, value.B)
-                                if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(Color3.new(value.R, value.G, value.B)) end
+                                NoxvaLib.Flags[flagName].Set(Color3.new(value.R, value.G, value.B))
                             elseif type(value) == "table" and value.State ~= nil and value.Key ~= nil then
-                                NoxvaLib.Flags[flagName].Value = value
-                                if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(value.State) end
+                                local loadedKey = Enum.KeyCode[value.Key] or Enum.KeyCode.E
+                                NoxvaLib.Flags[flagName].Set({State = value.State, Key = loadedKey})
                             else
-                                NoxvaLib.Flags[flagName].Value = value
-                                if NoxvaLib.Flags[flagName].Func then NoxvaLib.Flags[flagName].Func(value) end
+                                NoxvaLib.Flags[flagName].Set(value)
                             end
                         end
                     end
                     WindowFunctions:Notify("CONFIG", "Settings Loaded!", 4)
                 end
             else
-                WindowFunctions:Notify("ERROR", "No config file found!", 3)
+                WindowFunctions:Notify("ERROR", "File Save belum ada!", 3)
             end
         end)
     end
