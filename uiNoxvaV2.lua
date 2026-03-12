@@ -1,6 +1,6 @@
 -- ==========================================
 -- NOXVA UI ENGINE | PURE CORE LIBRARY V2.5
--- DEVELOPED BY DANZY (100% FULL FIX + COLOR PICKER SMOOTH)
+-- DEVELOPED BY DANZY (100% FULL FIX + COMPACT SERAPHIN SIZE + KOTAK LOGO)
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} 
@@ -52,17 +52,34 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     NotifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
     NotifLayout.Padding = UDim.new(0, 10)
 
+    -- ==========================================
+    -- LOGO KOTAK SAAT DI-CLOSE
+    -- ==========================================
     local OpenLogo = Instance.new("Frame", NoxvaUI)
     OpenLogo.Size = UDim2.new(0, 50, 0, 50)
     OpenLogo.Position = UDim2.new(0.5, -25, 0, 20)
     OpenLogo.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     OpenLogo.BackgroundTransparency = 0.15
     OpenLogo.Visible = false 
-    Instance.new("UICorner", OpenLogo).CornerRadius = UDim.new(1, 0)
-    local LogoStroke = Instance.new("UIStroke", OpenLogo); LogoStroke.Color = NoxvaLib.AccentColor; LogoStroke.Thickness = 2
-    local LogoImage = Instance.new("ImageLabel", OpenLogo); LogoImage.Size = UDim2.new(1, 0, 1, 0); LogoImage.BackgroundTransparency = 1; LogoImage.Image = "rbxthumb://type=Asset&id=125602638236059&w=150&h=150" 
-    Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(1, 0)
-    local LogoClicker = Instance.new("TextButton", OpenLogo); LogoClicker.Size = UDim2.new(1, 0, 1, 0); LogoClicker.BackgroundTransparency = 1; LogoClicker.Text = ""
+    -- UICorner Dihapus biar jadi kotak murni!
+
+    local LogoStroke = Instance.new("UIStroke", OpenLogo)
+    LogoStroke.Color = NoxvaLib.AccentColor
+    LogoStroke.Thickness = 2
+    LogoStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border -- Biar rapih di ujung kotak
+
+    local LogoImage = Instance.new("ImageLabel", OpenLogo)
+    LogoImage.Size = UDim2.new(1, -4, 1, -4) -- Padding biar gak ketutup stroke
+    LogoImage.Position = UDim2.new(0, 2, 0, 2)
+    LogoImage.BackgroundTransparency = 1
+    LogoImage.Image = "rbxthumb://type=Asset&id=125602638236059&w=150&h=150" 
+    LogoImage.ScaleType = Enum.ScaleType.Fit
+    -- UICorner Dihapus!
+
+    local LogoClicker = Instance.new("TextButton", OpenLogo)
+    LogoClicker.Size = UDim2.new(1, 0, 1, 0)
+    LogoClicker.BackgroundTransparency = 1
+    LogoClicker.Text = ""
 
     local FloatBg = Instance.new("Frame", OpenLogo)
     FloatBg.Position = UDim2.new(0.5, 0, 0, -35)
@@ -87,9 +104,12 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     FloatingStats.Font = Enum.Font.GothamBold
     FloatingStats.TextSize = 11
 
+    -- ==========================================
+    -- MAIN FRAME (SIZE COMPACT ALA SERAPHIN: 480x310)
+    -- ==========================================
     local MainFrame = Instance.new("Frame", NoxvaUI)
-    MainFrame.Size = UDim2.new(0, 500, 0, 350)
-    MainFrame.Position = UDim2.new(0.5, -250, 0.5, -175)
+    MainFrame.Size = UDim2.new(0, 480, 0, 310) 
+    MainFrame.Position = UDim2.new(0.5, -240, 0.5, -155) 
     MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
     MainFrame.BackgroundTransparency = 0.15 
     Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
@@ -184,15 +204,18 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     end
     MakeDraggable(MainFrame, TopBar); MakeDraggable(OpenLogo, LogoClicker)
 
+    -- ==========================================
+    -- SIDEBAR & CONTENT AREA (DISESUAIKAN LEBARNYA)
+    -- ==========================================
     local Sidebar = Instance.new("Frame", MainFrame)
-    Sidebar.Size = UDim2.new(0, 130, 1, -40); Sidebar.Position = UDim2.new(0, 0, 0, 40)
+    Sidebar.Size = UDim2.new(0, 115, 1, -40); Sidebar.Position = UDim2.new(0, 0, 0, 40)
     Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20); Sidebar.BackgroundTransparency = 0.2
     Sidebar.BorderSizePixel = 0
     local SidebarLayout = Instance.new("UIListLayout", Sidebar)
     SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder; SidebarLayout.Padding = UDim.new(0, 5)
 
     local ContentArea = Instance.new("Frame", MainFrame)
-    ContentArea.Size = UDim2.new(1, -130, 1, -40); ContentArea.Position = UDim2.new(0, 130, 0, 40)
+    ContentArea.Size = UDim2.new(1, -115, 1, -40); ContentArea.Position = UDim2.new(0, 115, 0, 40)
     ContentArea.BackgroundTransparency = 1
 
     local WindowFunctions = {}
@@ -848,7 +871,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
                 local d = false
                 local function upd(i)
                     local p = math.clamp((i.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
-                    -- FIX: TERNYATA BARIS INI KETINGGALAN COK
                     fill.Size = UDim2.new(p, 0, 1, 0) 
                     UpdateVisual(Color3.new(fillR.Size.X.Scale, fillG.Size.X.Scale, fillB.Size.X.Scale))
                 end
