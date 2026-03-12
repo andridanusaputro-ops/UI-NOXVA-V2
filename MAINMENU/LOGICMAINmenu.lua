@@ -5,17 +5,13 @@
 local MainMenuLogic = {}
 
 -- [ SETTINGAN KEY & DISCORD LU DI SINI ]
-MainMenuLogic.ValidKey = "DANZY" 
+MainMenuLogic.ValidKey = "NOXVA-WANGLIN-V2" 
 MainMenuLogic.DiscordLink = "https://discord.gg/VbumttfB2"
 
--- [ DATABASE GAME YANG DI-SUPPORT ]
-MainMenuLogic.SupportedGames = {
-    [81008840993724] = "Realpse Kesepian",
-}
-
 function MainMenuLogic:CheckSupport(PlaceId)
-    if self.SupportedGames[PlaceId] then
-        return true, self.SupportedGames[PlaceId]
+    -- Ngebaca langsung dari Database di NOXVAmain.lua
+    if _G.NoxvaSupportedGames and _G.NoxvaSupportedGames[PlaceId] then
+        return true, _G.NoxvaSupportedGames[PlaceId].Name
     end
     return false, "Game Not Supported"
 end
@@ -34,12 +30,10 @@ end
 function MainMenuLogic:OpenDiscord()
     local statusPesan = "Copied to Clipboard!"
     
-    -- 1. Copy ke clipboard buat jaga-jaga
     if setclipboard then
         setclipboard(self.DiscordLink)
     end
     
-    -- 2. Coba paksa buka browser otomatis
     local reqFunc = request or (syn and syn.request) or http_request
     if reqFunc then
         local success = pcall(function()
