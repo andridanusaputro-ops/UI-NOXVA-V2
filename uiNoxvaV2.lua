@@ -60,7 +60,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     OpenLogo.Visible = false 
     Instance.new("UICorner", OpenLogo).CornerRadius = UDim.new(1, 0)
     local LogoStroke = Instance.new("UIStroke", OpenLogo); LogoStroke.Color = NoxvaLib.AccentColor; LogoStroke.Thickness = 2
-    local LogoImage = Instance.new("ImageLabel", OpenLogo); LogoImage.Size = UDim2.new(1, 0, 1, 0); LogoImage.BackgroundTransparency = 1; LogoImage.Image = "rbxthumb://type=Asset&id=125602638236059w=150&h=150" 
+    local LogoImage = Instance.new("ImageLabel", OpenLogo); LogoImage.Size = UDim2.new(1, 0, 1, 0); LogoImage.BackgroundTransparency = 1; LogoImage.Image = "rbxthumb://type=Asset&id=125602638236059&w=150&h=150" 
     Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(1, 0)
     local LogoClicker = Instance.new("TextButton", OpenLogo); LogoClicker.Size = UDim2.new(1, 0, 1, 0); LogoClicker.BackgroundTransparency = 1; LogoClicker.Text = ""
 
