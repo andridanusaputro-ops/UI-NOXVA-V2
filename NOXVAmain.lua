@@ -1,6 +1,6 @@
 -- ==========================================
--- NOXVA HUB - MAIN UNIVERSAL LOADER + PREMIUM KEY SYSTEM
--- DEVELOPED BY DANZY
+-- NOXVA HUB - MAIN UNIVERSAL LOADER + ULTRA CLEAN KEY SYSTEM (V3.0)
+-- DEVELOPED BY DANZY (removed accent line & removed background dimming)
 -- ==========================================
 local BaseURL = "https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/main/"
 
@@ -23,6 +23,7 @@ local IsSupported, GameName = LogicMainMenu:CheckSupport(PlaceId)
 -- FUNGSI LOAD HUB UTAMA (Jalan Kalau Sukses)
 -- ==========================================
 local function LoadNoxvaHub()
+    -- Panggil Core UI Engine Lu (V2.8 yang ada multi-save)
     _G.NoxvaLib = GetFile("uiNoxvaV2.lua")
     
     if PlaceId == 81008840993724 then -- ID Game Fisch Lu
@@ -36,7 +37,7 @@ local function LoadNoxvaHub()
 end
 
 -- ==========================================
--- TAMPILAN PREMIUM KEY SYSTEM UI
+-- TAMPILAN PREMIUM KEY SYSTEM UI (ULTRA CLEAN)
 -- ==========================================
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
@@ -48,39 +49,28 @@ local targetParent = hui or CoreGui or (LocalPlayer and LocalPlayer:FindFirstChi
 if not targetParent then return end
 
 local KeyUI = Instance.new("ScreenGui")
-KeyUI.Name = "NoxvaPremiumKey"
+KeyUI.Name = "NoxvaPremiumKey_Clean"
 KeyUI.ResetOnSpawn = false
 KeyUI.Parent = targetParent
 
--- Background Gelap biar fokus ke pop-up
-local Overlay = Instance.new("Frame", KeyUI)
-Overlay.Size = UDim2.new(1, 0, 1, 0)
-Overlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Overlay.BackgroundTransparency = 1 -- Bakal di-tween ke 0.5
-Overlay.BorderSizePixel = 0
-
--- Frame Utama (Tanpa Border Warna!)
-local MainKeyFrame = Instance.new("Frame", Overlay)
+-- UPDATE: Parent MainKeyFrame langsung ke KeyUI (Biar gak ada transparansi gelap di belakang)
+local MainKeyFrame = Instance.new("Frame", KeyUI)
 MainKeyFrame.Size = UDim2.new(0, 0, 0, 0) -- Animasi dari 0
 MainKeyFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainKeyFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainKeyFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-MainKeyFrame.BackgroundTransparency = 0.05
+MainKeyFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15) -- Dibuat lebih gelap biar tetep menonjol
+MainKeyFrame.BackgroundTransparency = 0.02 -- Hampir solid
 MainKeyFrame.ClipsDescendants = true
 Instance.new("UICorner", MainKeyFrame).CornerRadius = UDim.new(0, 10)
 
--- Garis Aksen Elegan di Atas Frame
-local TopAccent = Instance.new("Frame", MainKeyFrame)
-TopAccent.Size = UDim2.new(1, 0, 0, 3)
-TopAccent.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-TopAccent.BorderSizePixel = 0
+-- UPDATE: Garis Aksen Biru di atas DIHAPUS.
 
--- Logo Kotak Lu (Nongol di tengah atas)
+-- Logo Kotak Lu (Pake rbxassetid biar pasti muncul cok!)
 local LogoImage = Instance.new("ImageLabel", MainKeyFrame)
 LogoImage.Size = UDim2.new(0, 55, 0, 55)
 LogoImage.Position = UDim2.new(0.5, -27.5, 0, 20)
 LogoImage.BackgroundTransparency = 1
-LogoImage.Image = "rbxassetid://125602638236059"
+LogoImage.Image = "rbxassetid://125602638236059" -- ID Logo Noxva
 LogoImage.ScaleType = Enum.ScaleType.Fit
 Instance.new("UICorner", LogoImage).CornerRadius = UDim.new(0, 10)
 
@@ -164,7 +154,6 @@ if IsSupported then
             VerifyBtn.Text = pesan
             VerifyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
             -- Animasi sukses nutup pop-up
-            TweenService:Create(Overlay, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
             local closeTween = TweenService:Create(MainKeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
             closeTween:Play()
             closeTween.Completed:Connect(function()
@@ -181,7 +170,6 @@ if IsSupported then
     end)
     
     -- Play Animasi Muncul (Size 320x245)
-    TweenService:Create(Overlay, TweenInfo.new(0.3), {BackgroundTransparency = 0.6}):Play()
     TweenService:Create(MainKeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 320, 0, 245)}):Play()
 
 else
@@ -229,13 +217,11 @@ else
     end)
 
     ExitBtn.MouseButton1Click:Connect(function()
-        TweenService:Create(Overlay, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
         local closeTween = TweenService:Create(MainKeyFrame, TweenInfo.new(0.4, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Size = UDim2.new(0, 0, 0, 0)})
         closeTween:Play()
         closeTween.Completed:Connect(function() KeyUI:Destroy() end)
     end)
 
     -- Play Animasi Muncul (Size 320x225 - Lebih pendek)
-    TweenService:Create(Overlay, TweenInfo.new(0.3), {BackgroundTransparency = 0.6}):Play()
     TweenService:Create(MainKeyFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(0, 320, 0, 220)}):Play()
 end
