@@ -25,7 +25,7 @@ end
 
 function MainMenuLogic:VerifyKey(InputKey)
     if InputKey == self.ValidKey then
-        return true, "Key Valid! Authenticating..."
+        return true, "Key Valid!"
     else
         return false, "Invalid Key!"
     end
