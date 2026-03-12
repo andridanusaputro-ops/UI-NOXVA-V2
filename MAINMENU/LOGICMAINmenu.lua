@@ -6,11 +6,11 @@ local MainMenuLogic = {}
 
 -- [ SETTINGAN KEY & DISCORD ]
 MainMenuLogic.ValidKey = "DANZY" 
-MainMenuLogic.DiscordLink = "https://discord.gg/noxvahub" 
+MainMenuLogic.DiscordLink = "https://discord.gg/VbumttfB2" 
 
 -- [ DATABASE GAME YANG DI-SUPPORT ]
 MainMenuLogic.SupportedGames = {
-    [81008840993724] = "Fisch / Realpse", -- Ganti sama ID game Fisch lu
+    [81008840993724] = "Realpse Kesepian", -- Ganti sama ID game Fisch lu
     [2753915549] = "Blox Fruits", -- Contoh game lain
     -- Tinggal tambahin ID game lain ke depannya di sini
 }
