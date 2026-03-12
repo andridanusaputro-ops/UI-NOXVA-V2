@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB (V3.0)
+-- NOXVA HUB 
 -- DEVELOPED BY DANZY 
 -- ==========================================
 local BaseURL = "https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/main/"
@@ -136,27 +136,10 @@ if IsSupported then
     AddHover(VerifyBtn, Color3.fromRGB(0, 120, 255), Color3.fromRGB(0, 150, 255))
     AddHover(GetKeyBtn, Color3.fromRGB(35, 35, 35), Color3.fromRGB(50, 50, 50))
 
-    -- LOGIC TOMBOL GET KEY (AUTO OPEN DISCORD)
+    -- LOGIC TOMBOL GET KEY (PANGGIL DARI FILE LOGIC)
     GetKeyBtn.MouseButton1Click:Connect(function()
-        local discordLink = LogicMainMenu.DiscordLink
-        
-        -- 1. Copy ke clipboard (Cadangan)
-        if setclipboard then
-            setclipboard(discordLink)
-        end
-        
-        -- 2. Coba paksa buka browser otomatis
-        local reqFunc = request or (syn and syn.request) or http_request
-        if reqFunc then
-            pcall(function()
-                reqFunc({
-                    Url = discordLink,
-                    Method = "GET"
-                })
-            end)
-        end
-
-        GetKeyBtn.Text = "Opening Discord..."
+        local pesan = LogicMainMenu:OpenDiscord()
+        GetKeyBtn.Text = pesan
         task.wait(2)
         GetKeyBtn.Text = "Get Key"
     end)
@@ -219,7 +202,6 @@ else
     AddHover(CopyIdBtn, Color3.fromRGB(35, 35, 35), Color3.fromRGB(50, 50, 50))
     AddHover(ExitBtn, Color3.fromRGB(200, 50, 50), Color3.fromRGB(220, 70, 70))
 
-    -- Logic Tombol Kalo Gak Support
     CopyIdBtn.MouseButton1Click:Connect(function()
         if setclipboard then
             setclipboard(tostring(PlaceId))
