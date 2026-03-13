@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC TIMELINE EDITOR (FIX FALL/CUT)
+-- NOXVA HUB | PURE LOGIC TIMELINE EDITOR (FIX FALL/CUT & AUTO-STOP)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -34,38 +34,64 @@ local function UpdateEditPos()
     hrp.Anchored = true 
     hrp.CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.5, 0), lookPos)
     
-    -- FIX LABEL UI
     if UI.EditLabel then
         UI.EditLabel.Text = "Frame: " .. Data.EditIndex .. "/" .. #Data.Path
     end
 end
 
--- FIX BUG: Inisialisasi posisi ke UJUNG JALAN kalau lu baru mulai ngedit pas jatoh
-local function InitEditIfNeeded()
-    if #Data.Path > 0 and (Data.EditIndex == 0 or Data.EditIndex > #Data.Path) then
-        Data.EditIndex = #Data.Path
-        -- Matiin Record/Play kalo lagi jalan
-        if Data.IsPlaying then Data.IsPlaying = false; if Data.Conns.Play then Data.Conns.Play:Disconnect() end end
+-- FIX V6: Fungsi ini buat ngeberhentiin Record & Play paksa pas lu mencet < atau >
+local function ForceStopAll()
+    if Data.IsRecording then
         if API and API.StopRecord then API.StopRecord() end
+        if UI.BtnRecord then UI.BtnRecord.Text = "⏺ RECORD" end
+        SendNotif("⏸ TIMELINE", "Record dihentikan paksa untuk Edit!")
+    end
+    
+    if Data.IsPlaying then
+        Data.IsPlaying = false
+        if Data.Conns.Play then Data.Conns.Play:Disconnect() end
+        if UI.BtnPlay then 
+            UI.BtnPlay.Text = "▶ PLAY"
+            UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90)
+        end
+        local char = player.Character
+        if char and char:FindFirstChild("Humanoid") then
+            char.Humanoid:Move(Vector3.zero, false)
+            char.Humanoid.AutoRotate = true
+        end
+        SendNotif("⏸ TIMELINE", "Auto Walk dihentikan paksa untuk Edit!")
     end
 end
 
 local function StepBack() 
-    InitEditIfNeeded()
-    if Data.EditIndex > 1 then 
-        Data.EditIndex = Data.EditIndex - 1; UpdateEditPos() 
+    ForceStopAll() -- Bener-bener matiin semua aktifitas
+    if #Data.Path == 0 then SendNotif("TIMELINE", "Data kosong!") return end
+    
+    -- Kalau lu baru buka Editor (Index 0) atau habis Record, langsung ke TITIK PALING TERAKHIR (Pas lu jatoh)
+    if Data.EditIndex == 0 or Data.EditIndex > #Data.Path then
+        Data.EditIndex = #Data.Path 
+    elseif Data.EditIndex > 1 then 
+        Data.EditIndex = Data.EditIndex - 1
     else
-        SendNotif("TIMELINE", "Mentok di titik awal!")
+        SendNotif("TIMELINE", "Mentok di titik paling awal!")
+        return
     end 
+    UpdateEditPos()
 end
 
 local function StepForward() 
-    InitEditIfNeeded()
-    if Data.EditIndex < #Data.Path then 
-        Data.EditIndex = Data.EditIndex + 1; UpdateEditPos() 
+    ForceStopAll() -- Bener-bener matiin semua aktifitas
+    if #Data.Path == 0 then SendNotif("TIMELINE", "Data kosong!") return end
+    
+    if Data.EditIndex == 0 then
+        Data.EditIndex = 1
+    elseif Data.EditIndex < #Data.Path then 
+        Data.EditIndex = Data.EditIndex + 1
     else
-        SendNotif("TIMELINE", "Mentok di titik akhir!")
+        SendNotif("TIMELINE", "Mentok di titik paling akhir!")
+        return
     end 
+    UpdateEditPos()
 end
 
 local function TrimAndResume()
@@ -84,12 +110,6 @@ local function TrimAndResume()
     
     SendNotif("✂️ TRIM", "Rute dipotong sampai frame " .. Data.EditIndex)
     if UI.EditLabel then UI.EditLabel.Text = "Frame: " .. Data.EditIndex .. "/" .. #Data.Path end
-    
-    -- Opsional: Langsung gas resume ngerekam lagi
-    if API and API.StartRecord then 
-        API.StartRecord(true)
-        if UI.BtnRecord then UI.BtnRecord.Text = "⏹ STOP REC" end
-    end 
 end
 
 -- ==========================================
@@ -102,7 +122,7 @@ if UI then
     
     if UI.CPDropdown then
         UI.CPDropdown:UpdateList({"Awal Rute", "Tengah Rute", "Ujung Rute"}, function(opt)
-            InitEditIfNeeded()
+            ForceStopAll()
             if opt == "Awal Rute" then Data.EditIndex = 1
             elseif opt == "Tengah Rute" then Data.EditIndex = math.floor(#Data.Path / 2)
             elseif opt == "Ujung Rute" then Data.EditIndex = #Data.Path end
@@ -111,4 +131,4 @@ if UI then
     end
 end
 
-print("Logic Timeline (V6 Editor) berhasil dimuat!")
+print("Logic Timeline (V6 Editor Fix) berhasil dimuat!")
