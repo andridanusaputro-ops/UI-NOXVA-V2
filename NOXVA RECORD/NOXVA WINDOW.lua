@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB - PURE WINDOW WALK RECORD (SYNCED V6 + COIL SCANNER)
+-- NOXVA HUB - PURE WINDOW WALK RECORD (SYNCED V6)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 
@@ -20,14 +20,9 @@ if not NoxvaUI then
 end
 
 -- ==========================================
--- GLOBAL EXPORT & COIL DATA (Akses untuk Logic)
+-- GLOBAL EXPORT (Buat diakses file logic lu)
 -- ==========================================
 _G.NoxvaWalkUI = {}
-_G.NoxvaWalkData = _G.NoxvaWalkData or {}
-_G.NoxvaWalkData.CoilSettings = {
-    Coil1Name = "Speed Coil", Coil1WS = 0, Coil1JP = 0,
-    Coil2Name = "Gravity Coil", Coil2WS = 0, Coil2JP = 0
-}
 
 -- ==========================================
 -- FUNGSI DRAGGABLE UI
@@ -186,24 +181,12 @@ _G.NoxvaWalkUI.BtnStop  = C_Btn(W_Control, "⏹ STOP", 50, Color3.fromRGB(40, 40
 AddCloseBtn(W_Control)
 
 -- ==========================================
--- TAB UI UTAMA (PEMANGGIL WIDGET & SETTING COIL)
+-- TAB UI UTAMA (PEMANGGIL WIDGET)
 -- ==========================================
 local WalkTab = Window:MakeTab("🏃 Walk Record")
 
 WalkTab:AddSection("WIDGET MANAGER")
 WalkTab:AddDoubleButton("Tampilkan Timeline", function() W_Timeline.Visible = true end, "Tampilkan Record", function() W_Record.Visible = true end)
 WalkTab:AddButton("Tampilkan Control Panel", function() W_Control.Visible = true end)
-
--- FITUR BARU: SETTING COIL & SPEED SCANNER
-WalkTab:AddSection("⚡ SCANNER & SETTING COIL")
-WalkTab:AddLabel("Sistem akan otomatis scan speed kamu saat Record. Tapi kamu bisa menimpa (override) kecepatannya secara paksa di bawah ini. Isi 0 jika ingin menggunakan auto-scan bawaan game.")
-
-WalkTab:AddTextbox("Nama Item Coil 1 (Wajib Sama)", "Speed Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil1Name = v end)
-WalkTab:AddTextbox("Override Coil 1 - WalkSpeed", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil1WS = tonumber(v) or 0 end)
-WalkTab:AddTextbox("Override Coil 1 - JumpPower", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil1JP = tonumber(v) or 0 end)
-
-WalkTab:AddTextbox("Nama Item Coil 2 (Wajib Sama)", "Gravity Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil2Name = v end)
-WalkTab:AddTextbox("Override Coil 2 - WalkSpeed", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil2WS = tonumber(v) or 0 end)
-WalkTab:AddTextbox("Override Coil 2 - JumpPower", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil2JP = tonumber(v) or 0 end)
 
 Window:MakeConfigTab()
