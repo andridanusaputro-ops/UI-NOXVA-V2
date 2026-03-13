@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX JUMP & OVERHSOOT)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX LOMPAT PANIK & NYANGKUT)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -40,7 +40,7 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REAL-TIME SPEED ENFORCER
+-- REAL-TIME SPEED ENFORCER 
 -- ==========================================
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
@@ -67,7 +67,7 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     if targetWS > 0 then 
         hum.WalkSpeed = targetWS 
     else
-        hum.WalkSpeed = 16
+        hum.WalkSpeed = 16 
     end
     
     if targetJP > 0 then 
@@ -100,7 +100,7 @@ local function AddNode(pos, isJump)
 end
 
 -- ==========================================
--- 1. FUNGSI RECORDING (NORMAL)
+-- 1. FUNGSI RECORDING (FIX SENSITIVITAS LOMPAT)
 -- ==========================================
 local function StopRecording()
     Data.IsRecording = false
@@ -135,9 +135,8 @@ local function StartRecording(isResume)
     end)
     
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
-        local state = humanoid:GetState()
-        local isGrounded = (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics or state == Enum.HumanoidStateType.Landed)
-        if Data.IsRecording and isGrounded and (tick() - lastJumpTime) > 0.5 then 
+        -- FIX: Gak usah ngecek IsGrounded ketat-ketat, pokoknya lu mencet lompat = rekam!
+        if Data.IsRecording and (tick() - lastJumpTime) > 0.4 then 
             lastJumpTime = tick()
             AddNode(hrp.Position, true)
             lastPos = hrp.Position
@@ -173,7 +172,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (FIX MELENCENG & FIX LOMPAT AYAN!)
+-- 2. FUNGSI PLAYBACK (FIX LOMPAT PANIK)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -249,7 +248,6 @@ local function PlayRecord()
             humanoid:Move(dir, false)
             
             if not isMidAir then
-                -- FIX LOMPAT AYAN: Hapus ChangeState(Jumping) disini! Murni dorong Y naik dikit doang kalo nanjak.
                 local targetVelY = hrp.Velocity.Y
                 if yDiff > 1.2 then
                     targetVelY = math.max(targetVelY, 15) 
@@ -258,24 +256,32 @@ local function PlayRecord()
                 end
                 hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
             else
-                -- Kalo lagi di udara, cuma ngatur X dan Z, biarin gravitasi ngatur Y
                 hrp.Velocity = Vector3.new(dir.X * targetWS, hrp.Velocity.Y, dir.Z * targetWS)
             end
             
-            -- Biar menghadap rute
             if dist2D > 0.5 then 
                 local freshPos = hrp.Position
                 hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
             end
         end
 
-        -- FIX BABLAS/MELENCENG: Tolerance dibikin melebar menyesuaikan kecepatan speed lu.
         local tolerance = math.max(2.5, targetWS * 0.05)
         
-        -- MURNI LOMPAT DARI REKAMAN LU AJA!
-        if step.IsJumpPoint and dist2D < (tolerance + 1.5) then 
-            if not isMidAir and (tick() - lastJumpTime > 0.3) then
+        -- ==================================================
+        -- FIX: LOMPAT PANIK DEKET TANGGA & ANTI NYANGKUT
+        -- ==================================================
+        -- 1. Trigger lompat kita awalin dikit biar gak keburu nabrak (tolerance + 2.5)
+        if step.IsJumpPoint and dist2D < (tolerance + 2.5) then 
+            if tick() - lastJumpTime > 0.3 then
+                -- 2. PAKSA LOMPAT: Gak usah ngecek dia lagi isMidAir apa gak, sikat aja!
+                humanoid.Jump = true
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                
+                -- 3. BOOST NAIK: Kalo targetnya lebih tinggi (tangga/platform), kasih dorongan Y!
+                if yDiff > 0.5 then
+                    hrp.Velocity = Vector3.new(hrp.Velocity.X, math.max(hrp.Velocity.Y, targetJP * 0.8), hrp.Velocity.Z)
+                end
+                
                 lastJumpTime = tick()
             end
         end
