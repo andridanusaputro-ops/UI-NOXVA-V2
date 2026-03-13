@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V9 THE REDEMPTION ENGINE)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE CLEAN + FIX SHORT JUMP)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -9,7 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
--- BRANKAS DATA GLOBAL
+-- BRANKAS DATA GLOBAL (BERSIH DARI COIL SETTINGS)
 _G.NoxvaWalkData = _G.NoxvaWalkData or {}
 _G.NoxvaWalkData.Path = _G.NoxvaWalkData.Path or {}
 _G.NoxvaWalkData.Conns = _G.NoxvaWalkData.Conns or {}
@@ -17,11 +17,6 @@ _G.NoxvaWalkData.IsRecording = _G.NoxvaWalkData.IsRecording or false
 _G.NoxvaWalkData.IsPlaying = _G.NoxvaWalkData.IsPlaying or false
 _G.NoxvaWalkData.CurrentNode = _G.NoxvaWalkData.CurrentNode or 1
 _G.NoxvaWalkData.TotalRecordTime = _G.NoxvaWalkData.TotalRecordTime or 0
-
--- BASE SPEED SAVER
-_G.NoxvaWalkData.BaseWS = _G.NoxvaWalkData.BaseWS or 16
-_G.NoxvaWalkData.BaseJP = _G.NoxvaWalkData.BaseJP or 50
-_G.NoxvaWalkData.BaseCaptured = _G.NoxvaWalkData.BaseCaptured or false
 
 local Data = _G.NoxvaWalkData
 
@@ -45,47 +40,13 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- ⚡ MESIN SPEED REALTIME (100% STABIL) ⚡
--- ==========================================
-if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
-Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
-    local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not hum then return end
-
-    if not Data.BaseCaptured and hum.WalkSpeed > 0 then
-        Data.BaseWS = hum.WalkSpeed
-        Data.BaseJP = hum.JumpPower
-        Data.BaseCaptured = true
-    end
-
-    local tool = char:FindFirstChildOfClass("Tool")
-    local toolName = tool and tool.Name or "None"
-
-    local defaultWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or Data.BaseWS
-    local defaultJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or Data.BaseJP
-
-    local targetWS = defaultWS
-    local targetJP = defaultJP
-
-    if toolName == Data.CoilSettings.Coil1Name then
-        targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or defaultWS
-        targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or defaultJP
-    elseif toolName == Data.CoilSettings.Coil2Name then
-        targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or defaultWS
-        targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or defaultJP
-    end
-
-    hum.WalkSpeed = targetWS
-    hum.UseJumpPower = true 
-    hum.JumpPower = targetJP
-end)
-
--- ==========================================
--- FUNGSI RECORDING MURNI
+-- 1. FUNGSI RECORDING (MURNI NATIVE)
 -- ==========================================
 local function AddNode(pos, isJump)
-    table.insert(Data.Path, {Position = pos, IsJumpPoint = isJump})
+    table.insert(Data.Path, {
+        Position = pos, 
+        IsJumpPoint = isJump
+    })
 end
 
 local function StopRecording()
@@ -121,7 +82,9 @@ local function StartRecording(isResume)
     end)
     
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
-        if Data.IsRecording and (tick() - lastJumpTime) > 0.4 then 
+        local state = humanoid:GetState()
+        local isGrounded = (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics or state == Enum.HumanoidStateType.Landed)
+        if Data.IsRecording and isGrounded and (tick() - lastJumpTime) > 0.5 then 
             lastJumpTime = tick()
             AddNode(hrp.Position, true)
             lastPos = hrp.Position
@@ -157,7 +120,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (ANTI-BABLAS MATHEMATICS)
+-- 2. FUNGSI PLAYBACK (FIX JUMP PANIC & SHORT DISTANCE)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -181,13 +144,14 @@ local function PlayRecord()
     
     stuckTimer = 0
     Data.IsPlaying = true
-    humanoid.AutoRotate = true 
+    humanoid.AutoRotate = false 
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
     Data.Conns.Play = RunService.Heartbeat:Connect(function(dt)
         if not Data.IsPlaying or humanoid.Health <= 0 then
             Data.IsPlaying = false
+            humanoid.AutoRotate = true 
             if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
         
@@ -195,50 +159,77 @@ local function PlayRecord()
             Data.IsPlaying = false; SendNotif("🏁 SELESAI", "Auto Walk Selesai!")
             if UI and UI.BtnPlay then UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90) end
             humanoid:Move(Vector3.zero, false)
+            hrp.Velocity = Vector3.zero
+            humanoid.AutoRotate = true 
             if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
 
         local step = Data.Path[Data.CurrentNode]
+        
+        -- MURNI PAKE SPEED BAWAAN ROBLOX SAAT INI (Entah lu lagi pake coil atau gak, dia ngikut otomatis)
+        local currentWS = humanoid.WalkSpeed
+
         local targetPos = step.Position
         local myPos = hrp.Position
         
-        -- Kalkulasi Jarak Murni 2D (Abaikan Y biar gak kebingungan di tangga)
-        local dist2D = (Vector3.new(targetPos.X, 0, targetPos.Z) - Vector3.new(myPos.X, 0, myPos.Z)).Magnitude
+        local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
+        local dist2D = walkDir.Magnitude
+        local dir = (dist2D > 0.05) and walkDir.Unit or Vector3.zero
         
-        -- [RUMUS ANTI-BABLAS]
-        -- Toleransi dinamis berdasarkan jarak yang ditempuh bot dalam 2 frame ke depan!
-        local currentWS = humanoid.WalkSpeed
-        local tolerance = math.max(2.5, currentWS * dt * 1.5)
+        local state = humanoid:GetState()
+        local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
+        local yDiff = targetPos.Y - myPos.Y
 
-        -- TRIGGER LOMPAT DARI RECORD
-        if step.IsJumpPoint and dist2D <= (tolerance + 2.0) then 
+        if dir ~= Vector3.zero then
+            humanoid:Move(dir, false)
+            
+            if not isMidAir then
+                local targetVelY = hrp.Velocity.Y
+                if yDiff > 1.2 then
+                    targetVelY = math.max(targetVelY, 15) 
+                elseif yDiff < -5 and dist2D < 4 then
+                    targetVelY = -60 
+                end
+                hrp.Velocity = Vector3.new(dir.X * currentWS, targetVelY, dir.Z * currentWS)
+            else
+                hrp.Velocity = Vector3.new(dir.X * currentWS, hrp.Velocity.Y, dir.Z * currentWS)
+            end
+            
+            if dist2D > 0.5 then 
+                local freshPos = hrp.Position
+                hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
+            end
+        end
+
+        local tolerance = math.max(2.5, currentWS * 0.05)
+        
+        -- ========================================================
+        -- FIX BUG PANIK LOMPAT DEKET TANGGA:
+        -- Gak usah ngecek `isMidAir` lagi. Pokoknya lu nemu titik lompat -> PAKSA LOMPAT!
+        -- ========================================================
+        if step.IsJumpPoint and dist2D < (tolerance + 2.0) then 
             if (tick() - lastJumpTime > 0.3) then
-                humanoid.Jump = true
+                humanoid.Jump = true -- Ini yang bikin dia gak pernah gagal lompat
+                
+                -- Kalo tangganya agak tinggi, suntik Y Velocity dikit biar gak nyangkut nembus
+                if yDiff > 0.5 then
+                    hrp.Velocity = Vector3.new(hrp.Velocity.X, math.max(hrp.Velocity.Y, humanoid.JumpPower * 0.8), hrp.Velocity.Z)
+                end
+                
                 lastJumpTime = tick()
             end
         end
 
-        -- KALO UDAH MASUK RADIUS (GAK BAKAL OVERSHOOT LAGI)
-        if dist2D <= tolerance then
+        if dist2D < tolerance then
             Data.CurrentNode = Data.CurrentNode + 1
             stuckTimer = 0
-            return
         end
 
-        -- JALAN MURNI PAKE ROBLOX NATIVE
-        local dir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos).Unit
-        humanoid:Move(dir, false)
-
-        -- AUTO LOMPAT KALO TITIK BERIKUTNYA LEBIH TINGGI (TANGGA/OBJEK)
-        if targetPos.Y - myPos.Y > 1.5 and dist2D < 5 then
-            humanoid.Jump = true
-        end
-
-        -- STUCK HANDLER (Kalo nabrak tembok atau jatuh)
         stuckTimer = stuckTimer + dt
         if stuckTimer > 1.5 then 
-            -- Culik paksa ke titik tujuan kalo beneran macet
-            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2.5, 0))
+            if not isMidAir then 
+                hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+            end
             Data.CurrentNode = Data.CurrentNode + 1
             stuckTimer = 0
         end
@@ -246,7 +237,7 @@ local function PlayRecord()
 end
 
 -- ==========================================
--- 3. BINDING TOMBOL KE LOGIC & FIX JSON
+-- 3. BINDING TOMBOL KE LOGIC
 -- ==========================================
 if UI and UI.BtnRecord then
     UI.BtnRecord.MouseButton1Click:Connect(function()
