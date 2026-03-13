@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC TIMELINE EDITOR (FIX FALL/CUT & AUTO-STOP)
+-- NOXVA HUB | PURE LOGIC TIMELINE EDITOR (FIX AUTO RESUME)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -39,7 +39,6 @@ local function UpdateEditPos()
     end
 end
 
--- FIX V6: Fungsi ini buat ngeberhentiin Record & Play paksa pas lu mencet < atau >
 local function ForceStopAll()
     if Data.IsRecording then
         if API and API.StopRecord then API.StopRecord() end
@@ -64,10 +63,9 @@ local function ForceStopAll()
 end
 
 local function StepBack() 
-    ForceStopAll() -- Bener-bener matiin semua aktifitas
+    ForceStopAll()
     if #Data.Path == 0 then SendNotif("TIMELINE", "Data kosong!") return end
     
-    -- Kalau lu baru buka Editor (Index 0) atau habis Record, langsung ke TITIK PALING TERAKHIR (Pas lu jatoh)
     if Data.EditIndex == 0 or Data.EditIndex > #Data.Path then
         Data.EditIndex = #Data.Path 
     elseif Data.EditIndex > 1 then 
@@ -80,7 +78,7 @@ local function StepBack()
 end
 
 local function StepForward() 
-    ForceStopAll() -- Bener-bener matiin semua aktifitas
+    ForceStopAll()
     if #Data.Path == 0 then SendNotif("TIMELINE", "Data kosong!") return end
     
     if Data.EditIndex == 0 then
@@ -110,6 +108,13 @@ local function TrimAndResume()
     
     SendNotif("✂️ TRIM", "Rute dipotong sampai frame " .. Data.EditIndex)
     if UI.EditLabel then UI.EditLabel.Text = "Frame: " .. Data.EditIndex .. "/" .. #Data.Path end
+    
+    -- FIX V6: LANGSUNG AUTO RESUME RECORDING SETELAH DIPOTONG
+    if API and API.StartRecord then 
+        API.StartRecord(true) -- Parameter 'true' artinya dia ngelanjutin rute
+        if UI.BtnRecord then UI.BtnRecord.Text = "⏹ STOP REC" end
+        SendNotif("▶️ RESUME", "Otomatis melanjutkan rekaman!")
+    end 
 end
 
 -- ==========================================
@@ -131,4 +136,4 @@ if UI then
     end
 end
 
-print("Logic Timeline (V6 Editor Fix) berhasil dimuat!")
+print("Logic Timeline (Fix Auto Resume) berhasil dimuat!")
