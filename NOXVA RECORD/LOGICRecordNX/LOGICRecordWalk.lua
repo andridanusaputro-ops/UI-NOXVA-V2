@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V10 FINAL - PURE NATIVE JUMP & MOVE)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V11 FINAL - SMOOTH MOMENTUM PHYSICS)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -42,12 +42,11 @@ end
 -- ==========================================
 -- 1. FUNGSI RECORDING (MURNI & SENSITIF)
 -- ==========================================
--- FIX: Tambahin parameter walkSpeed buat nyimpen speed coil
 local function AddNode(pos, isJump, walkSpeed)
     table.insert(Data.Path, {
         Position = pos, 
         IsJumpPoint = isJump,
-        Speed = walkSpeed or 16 -- Default 16 kalo kosong
+        Speed = walkSpeed or 16
     })
 end
 
@@ -83,11 +82,9 @@ local function StartRecording(isResume)
         if Data.IsRecording then StopRecording(); SendNotif("⏸️ RECORD", "Mati! Recording Pause.") end
     end)
     
-    -- MEREKAM LOMPAT TANPA GAGAL (Gak pake ngecek isGrounded lagi!)
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
         if Data.IsRecording and (tick() - lastJumpTime) > 0.3 then 
             lastJumpTime = tick()
-            -- FIX: Simpen WalkSpeed
             AddNode(hrp.Position, true, humanoid.WalkSpeed)
             lastPos = hrp.Position
             UpdateInfoUI()
@@ -96,7 +93,6 @@ local function StartRecording(isResume)
     
     Data.Conns.State = humanoid.StateChanged:Connect(function(oldState, newState)
         if Data.IsRecording and newState == Enum.HumanoidStateType.Landed then
-            -- FIX: Simpen WalkSpeed
             AddNode(hrp.Position, false, humanoid.WalkSpeed)
             lastPos = hrp.Position
             UpdateInfoUI()
@@ -112,8 +108,9 @@ local function StartRecording(isResume)
             UpdateInfoUI()
         end
         
-        if (hrp.Position - lastPos).Magnitude > 2.5 then
-            -- FIX: Simpen WalkSpeed
+        -- Toleransi rekam node dinamis tergantung seberapa kenceng larinya
+        local recordGap = math.max(2.5, humanoid.WalkSpeed * 0.05)
+        if (hrp.Position - lastPos).Magnitude > recordGap then
             AddNode(hrp.Position, false, humanoid.WalkSpeed)
             lastPos = hrp.Position
         end
@@ -145,8 +142,6 @@ local function PlayRecord()
     
     stuckTimer = 0
     Data.IsPlaying = true
-    
-    -- NYALAIN AUTOROTATE BIAR ROBLOX YANG MUTER BADANNYA (BUKAN CFRAME KITA)
     humanoid.AutoRotate = true 
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
@@ -165,19 +160,23 @@ local function PlayRecord()
         end
 
         local step = Data.Path[Data.CurrentNode]
-        local targetPos = step.Position
-        local myPos = hrp.Position
+        if step.Speed then humanoid.WalkSpeed = step.Speed end
         
-        -- FIX: Setel WalkSpeed sesuai yang direcord biar ngikutin efek Speed Coil
-        if step.Speed then
-            humanoid.WalkSpeed = step.Speed
+        -- LOOK AHEAD: Kalo lari kenceng, bidik node yg lebih depan dikit biar smooth
+        local lookAheadIndex = Data.CurrentNode
+        local currentWS = humanoid.WalkSpeed
+        if currentWS > 30 and Data.CurrentNode < #Data.Path then
+            lookAheadIndex = math.min(#Data.Path, Data.CurrentNode + 1)
         end
+        
+        local targetStep = Data.Path[lookAheadIndex]
+        local targetPos = targetStep.Position
+        local myPos = hrp.Position
         
         local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
         local dist2D = walkDir.Magnitude
         local dir = (dist2D > 0.05) and walkDir.Unit or Vector3.zero
         
-        -- ANTI BUTA RUTE JATUH
         local yDiff = targetPos.Y - myPos.Y
         if yDiff < -20 or dist2D > 30 then
             hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
@@ -186,18 +185,21 @@ local function PlayRecord()
             return
         end
 
-        -- MURNI PHYSICS NATIVE, JANGAN PERNAH PAKE CFRAME ATAU VELOCITY DI SINI!
         if dir ~= Vector3.zero then
             humanoid:Move(dir, false)
         end
 
-        local currentWS = humanoid.WalkSpeed
-        local tolerance = math.max(2.5, currentWS * 0.05)
+        -- LOGIC MOMENTUM: Toleransi ganti node dilebarin kalo lagi di udara / lari super kenceng
+        local tolerance = math.max(2.5, currentWS * 0.1)
+        local state = humanoid:GetState()
+        local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
         
-        -- MURNI TRIGGER LOMPAT
-        if step.IsJumpPoint and dist2D < (tolerance + 1.5) then 
+        if isMidAir then 
+            tolerance = tolerance * 1.5 
+        end
+
+        if step.IsJumpPoint and dist2D < (tolerance + 2.0) then 
             if (tick() - lastJumpTime > 0.3) then
-                -- INI KOMBINASI MAUT BIAR GAK PERNAH GAGAL LOMPAT
                 humanoid.Jump = true
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 lastJumpTime = tick()
@@ -209,11 +211,8 @@ local function PlayRecord()
             stuckTimer = 0
         end
 
-        -- STUCK HANDLER NORMAL
         stuckTimer = stuckTimer + dt
         if stuckTimer > 1.5 then 
-            local state = humanoid:GetState()
-            local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
             if not isMidAir then 
                 hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
                 hrp.Velocity = Vector3.zero
@@ -243,7 +242,6 @@ if UI and UI.BtnRecord then
         if writefile then 
             local savablePath = {}
             for _, step in ipairs(Data.Path) do 
-                -- FIX: Save Speed ke JSON
                 table.insert(savablePath, {
                     x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
                     IsJumpPoint = step.IsJumpPoint,
@@ -261,7 +259,6 @@ if UI and UI.BtnRecord then
             if success and type(decoded) == "table" then
                 Data.Path = {}
                 for _, step in ipairs(decoded) do 
-                    -- FIX: Load Speed dari JSON
                     table.insert(Data.Path, {
                         Position = Vector3.new(step.x, step.y, step.z), 
                         IsJumpPoint = step.IsJumpPoint,
@@ -279,7 +276,6 @@ if UI and UI.BtnRecord then
         if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
         local s = "local Route = {\n"
         for _,v in ipairs(Data.Path) do 
-            -- FIX: Export ikutan bawa data Speed
             s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, %.2f},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Speed or 16) 
         end
         s = s.."}\nreturn Route"
