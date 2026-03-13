@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FINAL - FIX SAVE SPEED & COIL UNEQUIP)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V7 ENGINE - ROMBAK TOTAL PERFECT)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -17,11 +17,6 @@ _G.NoxvaWalkData.IsRecording = _G.NoxvaWalkData.IsRecording or false
 _G.NoxvaWalkData.IsPlaying = _G.NoxvaWalkData.IsPlaying or false
 _G.NoxvaWalkData.CurrentNode = _G.NoxvaWalkData.CurrentNode or 1
 _G.NoxvaWalkData.TotalRecordTime = _G.NoxvaWalkData.TotalRecordTime or 0
-
--- Simpen Speed Asli Bawaan Game Biar Bisa Ngerem
-_G.NoxvaWalkData.BaseWS = _G.NoxvaWalkData.BaseWS or 16
-_G.NoxvaWalkData.BaseJP = _G.NoxvaWalkData.BaseJP or 50
-_G.NoxvaWalkData.BaseCaptured = _G.NoxvaWalkData.BaseCaptured or false
 
 local Data = _G.NoxvaWalkData
 
@@ -45,41 +40,48 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REAL-TIME SPEED ENFORCER (FIX COPOT COIL!)
+-- MESIN SPEED (PENENTU KECEPATAN MUTLAK)
 -- ==========================================
+local function ApplySpeed(humanoid, toolName)
+    if not humanoid then return end
+    
+    local targetWS = 16 -- DEFAULT MUTLAK KALO GAK PAKE COIL
+    local targetJP = 50 -- DEFAULT MUTLAK KALO GAK PAKE COIL
+    
+    -- Kalo di UI lu ngisi Normal Speed, pake angka UI
+    if Data.CoilSettings.NormalWS > 0 then targetWS = Data.CoilSettings.NormalWS end
+    if Data.CoilSettings.NormalJP > 0 then targetJP = Data.CoilSettings.NormalJP end
+
+    -- Deteksi Coil 1 & Coil 2
+    if toolName == Data.CoilSettings.Coil1Name then
+        targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or targetWS
+        targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or targetJP
+    elseif toolName == Data.CoilSettings.Coil2Name then
+        targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or targetWS
+        targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or targetJP
+    end
+
+    -- PAKSA TERAPKAN KE KARAKTER
+    humanoid.WalkSpeed = targetWS
+    humanoid.UseJumpPower = true
+    humanoid.JumpPower = targetJP
+end
+
+-- REALTIME SPEED CHECKER (Jalan terus 24 jam)
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
+    -- Kalau lagi Play, Mesin Play yang ngatur speednya, jadi ini stop dulu
     if Data.IsPlaying then return end 
     
     local char = player.Character
     local hum = char and char:FindFirstChild("Humanoid")
     if not hum then return end
 
-    -- Capture speed asli game pas pertama kali inject biar valid
-    if not Data.BaseCaptured and hum.WalkSpeed > 0 then
-        Data.BaseWS = hum.WalkSpeed
-        Data.BaseJP = hum.JumpPower
-        Data.BaseCaptured = true
-    end
-
     local tool = char:FindFirstChildOfClass("Tool")
     local toolName = tool and tool.Name or "None"
-
-    local targetWS = Data.CoilSettings.NormalWS
-    local targetJP = Data.CoilSettings.NormalJP
-
-    if toolName == Data.CoilSettings.Coil1Name then
-        targetWS = Data.CoilSettings.Coil1WS
-        targetJP = Data.CoilSettings.Coil1JP
-    elseif toolName == Data.CoilSettings.Coil2Name then
-        targetWS = Data.CoilSettings.Coil2WS
-        targetJP = Data.CoilSettings.Coil2JP
-    end
-
-    -- Kalo di UI ada angkanya, paksa. Kalo kosong/dicopot, BALIKIN KE SPEED NORMAL! (Ini Fix Bug Coil Lu)
-    hum.WalkSpeed = targetWS > 0 and targetWS or Data.BaseWS
-    hum.UseJumpPower = true 
-    hum.JumpPower = targetJP > 0 and targetJP or Data.BaseJP
+    
+    -- Terapkan speed sesuai dia pegang apa
+    ApplySpeed(hum, toolName)
 end)
 
 -- ==========================================
@@ -95,21 +97,15 @@ local function GetEquippedTool()
 end
 
 local function AddNode(pos, isJump)
-    local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    
     table.insert(Data.Path, {
         Position = pos, 
         IsJumpPoint = isJump,
-        Tool = GetEquippedTool(),
-        -- FIX RELOG: Kita bener-bener nyimpen angka speednya ke dalem data path!
-        WS = hum and hum.WalkSpeed or 16,
-        JP = hum and hum.JumpPower or 50
+        Tool = GetEquippedTool() -- HANYA SIMPAN NAMA TOOL, JANGAN SIMPAN ANGKA SPEED!
     })
 end
 
 -- ==========================================
--- 1. FUNGSI RECORDING
+-- 1. FUNGSI RECORDING (FIX SENSITIVITAS LOMPAT)
 -- ==========================================
 local function StopRecording()
     Data.IsRecording = false
@@ -144,7 +140,8 @@ local function StartRecording(isResume)
     end)
     
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
-        if Data.IsRecording and (tick() - lastJumpTime) > 0.4 then 
+        -- Gak usah ngecek ground, pokoknya lu pencet lompat ya direkam.
+        if Data.IsRecording and (tick() - lastJumpTime) > 0.3 then 
             lastJumpTime = tick()
             AddNode(hrp.Position, true)
             lastPos = hrp.Position
@@ -180,7 +177,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (FIX RELOG SPEED & PHYSICS)
+-- 2. FUNGSI PLAYBACK (FIX NYEMPLUNG & PHYSICS)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -204,7 +201,7 @@ local function PlayRecord()
     
     stuckTimer = 0
     Data.IsPlaying = true
-    humanoid.AutoRotate = false 
+    humanoid.AutoRotate = false -- MATIIN BIAR KITA YANG ARAHIN BADANNYA SECARA PRESISI
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
@@ -226,28 +223,8 @@ local function PlayRecord()
 
         local step = Data.Path[Data.CurrentNode]
         
-        -- Cek Setting UI
-        local uiWS = 0
-        local uiJP = 0
-        
-        if step.Tool == Data.CoilSettings.Coil1Name then
-            uiWS = Data.CoilSettings.Coil1WS
-            uiJP = Data.CoilSettings.Coil1JP
-        elseif step.Tool == Data.CoilSettings.Coil2Name then
-            uiWS = Data.CoilSettings.Coil2WS
-            uiJP = Data.CoilSettings.Coil2JP
-        else
-            uiWS = Data.CoilSettings.NormalWS
-            uiJP = Data.CoilSettings.NormalJP
-        end
-        
-        -- FIX RELOG: Kalo UI lu isi angkanya 0 (karena abis relog), dia bakal pake angka Speed ASLI yang nempel di JSON pas lu record!
-        local finalWS = uiWS > 0 and uiWS or (step.WS or Data.BaseWS)
-        local finalJP = uiJP > 0 and uiJP or (step.JP or Data.BaseJP)
-
-        humanoid.WalkSpeed = finalWS
-        humanoid.UseJumpPower = true
-        humanoid.JumpPower = finalJP
+        -- Terapkan speed sesuai Tool yang terekam di Node ini
+        ApplySpeed(humanoid, step.Tool)
 
         local targetPos = step.Position
         local myPos = hrp.Position
@@ -260,38 +237,33 @@ local function PlayRecord()
         local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
         local yDiff = targetPos.Y - myPos.Y
 
-        -- Sistem Anti-Buta Rute
-        if dist2D > 25 or yDiff < -15 then
-            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
-            hrp.Velocity = Vector3.zero 
+        -- =======================================================
+        -- FIX NYEMPLUNG: ANTI JATUH KE JURANG
+        -- =======================================================
+        if yDiff < -15 or dist2D > 30 then
+            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+            hrp.Velocity = Vector3.zero
+            humanoid:ChangeState(Enum.HumanoidStateType.Landed)
             stuckTimer = 0
-            return 
+            return
         end
 
         if dir ~= Vector3.zero then
+            -- JALAN MURNI PAKE ROBLOX PHYSICS
             humanoid:Move(dir, false)
             
-            if not isMidAir then
-                local targetVelY = hrp.Velocity.Y
-                if yDiff > 1.2 then
-                    targetVelY = math.max(targetVelY, finalJP * 0.8) 
-                elseif yDiff < -5 and dist2D < 4 then
-                    targetVelY = -60 
-                end
-                hrp.Velocity = Vector3.new(dir.X * finalWS, targetVelY, dir.Z * finalWS)
-            else
-                -- Di udara biarin gravitasi kerja
-            end
-            
-            if dist2D > 0.5 then 
-                local freshPos = hrp.Position
-                hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
+            -- FIX MELENCENG: Paksa ngadep lurus ke titik target biar gak kepeleset belok
+            if dist2D > 0.5 then
+                local lookCFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
+                hrp.CFrame = lookCFrame
             end
         end
 
-        local tolerance = math.max(2.5, finalWS * 0.05)
+        -- RADIUS DINAMIS: Makin kenceng speed, makin lebar deteksinya biar gak bablas
+        local tolerance = math.max(2.5, humanoid.WalkSpeed * 0.06)
         
-        if step.IsJumpPoint and dist2D < (tolerance + 1.5) then 
+        -- LOMPAT MUTLAK
+        if step.IsJumpPoint and dist2D < (tolerance + 1.0) then 
             if not isMidAir and (tick() - lastJumpTime > 0.3) then
                 humanoid.Jump = true
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
@@ -331,7 +303,7 @@ if UI and UI.BtnRecord then
         else UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90); if Data.Conns.Play then Data.Conns.Play:Disconnect() end; local char = player.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false); char.Humanoid.AutoRotate = true end end 
     end)
 
-    -- FIX SAVE: Simpen Angka Speednya!
+    -- FIX SAVE: HANYA SIMPAN TOOL AJA (Biar angka selalu update dari UI)
     UI.BtnSave.MouseButton1Click:Connect(function() 
         if writefile then 
             local savablePath = {}
@@ -339,8 +311,7 @@ if UI and UI.BtnRecord then
                 table.insert(savablePath, {
                     x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
                     IsJumpPoint = step.IsJumpPoint,
-                    Tool = step.Tool,
-                    WS = step.WS, JP = step.JP -- Simpan angka asli!
+                    Tool = step.Tool
                 }) 
             end
             writefile(ConfigFolder.."/NOXVA_Route.json", HttpService:JSONEncode(savablePath)) 
@@ -348,7 +319,7 @@ if UI and UI.BtnRecord then
         end 
     end)
 
-    -- FIX LOAD: Baca Angka Speednya!
+    -- FIX LOAD: LOAD HANYA TOOL AJA
     UI.BtnLoad.MouseButton1Click:Connect(function() 
         if isfile and isfile(ConfigFolder.."/NOXVA_Route.json") then 
             local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFolder.."/NOXVA_Route.json")) end)
@@ -358,8 +329,7 @@ if UI and UI.BtnRecord then
                     table.insert(Data.Path, {
                         Position = Vector3.new(step.x, step.y, step.z), 
                         IsJumpPoint = step.IsJumpPoint,
-                        Tool = step.Tool or "None",
-                        WS = step.WS or 16, JP = step.JP or 50 -- Load angka asli!
+                        Tool = step.Tool or "None"
                     }) 
                 end
                 Data.TotalRecordTime = #Data.Path * (1/60) 
@@ -373,7 +343,7 @@ if UI and UI.BtnRecord then
         if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
         local s = "local Route = {\n"
         for _,v in ipairs(Data.Path) do 
-            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, \"%s\", %.1f, %.1f},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Tool or "None", v.WS or 16, v.JP or 50) 
+            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, \"%s\"},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Tool or "None") 
         end
         s = s.."}\nreturn Route"
         if writefile then writefile(ConfigFolder.."/NOXVA_Script_Export.lua", s); SendNotif("✅ EXPORT", "Script berhasil di-export murni!")
