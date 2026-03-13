@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FULL PERFECT + REALTIME COIL)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE 10.000% FIX REALTIME)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -9,21 +9,15 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
--- BRANKAS DATA GLOBAL
-_G.NoxvaWalkData = _G.NoxvaWalkData or {
-    Path = {},
-    IsRecording = false,
-    IsPlaying = false,
-    CurrentNode = 1,
-    EditIndex = 0,
-    TotalRecordTime = 0,
-    Conns = {},
-    CoilSettings = {
-        NormalWS = 0, NormalJP = 0,
-        Coil1Name = "Speed Coil", Coil1WS = 0, Coil1JP = 0,
-        Coil2Name = "Gravity Coil", Coil2WS = 0, Coil2JP = 0
-    }
-}
+-- FIX FATAL BUG: Inisialisasi struktur Data biar gak mati/nil
+_G.NoxvaWalkData = _G.NoxvaWalkData or {}
+_G.NoxvaWalkData.Path = _G.NoxvaWalkData.Path or {}
+_G.NoxvaWalkData.Conns = _G.NoxvaWalkData.Conns or {}
+_G.NoxvaWalkData.IsRecording = _G.NoxvaWalkData.IsRecording or false
+_G.NoxvaWalkData.IsPlaying = _G.NoxvaWalkData.IsPlaying or false
+_G.NoxvaWalkData.CurrentNode = _G.NoxvaWalkData.CurrentNode or 1
+_G.NoxvaWalkData.TotalRecordTime = _G.NoxvaWalkData.TotalRecordTime or 0
+
 local Data = _G.NoxvaWalkData
 
 local ConfigFolder = "NoxvaHub/WalkRecords/" .. tostring(game.PlaceId)
@@ -46,11 +40,10 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REAL-TIME SPEED ENFORCER (AKTIFIN CUSTOM SPEED LU!)
+-- REAL-TIME SPEED ENFORCER (FIX USEJUMPPOWER!)
 -- ==========================================
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
-    -- Jangan nimpa kalo lagi bot PlayRecord (Karena pas PlayRecord pake logicnya sendiri)
     if Data.IsPlaying then return end 
     
     local char = player.Character
@@ -60,8 +53,8 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     local tool = char:FindFirstChildOfClass("Tool")
     local toolName = tool and tool.Name or "None"
 
-    local targetWS = 0
-    local targetJP = 0
+    local targetWS = Data.CoilSettings.NormalWS
+    local targetJP = Data.CoilSettings.NormalJP
 
     if toolName == Data.CoilSettings.Coil1Name then
         targetWS = Data.CoilSettings.Coil1WS
@@ -69,16 +62,23 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     elseif toolName == Data.CoilSettings.Coil2Name then
         targetWS = Data.CoilSettings.Coil2WS
         targetJP = Data.CoilSettings.Coil2JP
-    else
-        targetWS = Data.CoilSettings.NormalWS
-        targetJP = Data.CoilSettings.NormalJP
     end
 
-    -- AKTIFIN: Kalau di UI diisi angka lebih dari 0, paksa speed karakternya saat itu juga!
-    if targetWS > 0 then hum.WalkSpeed = targetWS end
-    if targetJP > 0 then hum.JumpPower = targetJP end
+    -- Kalo lu ngisi angka > 0, paksa speednya sekarang juga!
+    if targetWS > 0 then 
+        hum.WalkSpeed = targetWS 
+    else
+        hum.WalkSpeed = 16 -- Kembalikan ke normal kalo dilepas
+    end
+    
+    if targetJP > 0 then 
+        hum.UseJumpPower = true -- INI WAJIB BIAR JUMPPOWER 2000 LU BERFUNGSI!
+        hum.JumpPower = targetJP 
+    else
+        hum.UseJumpPower = true
+        hum.JumpPower = 50 -- Kembalikan ke normal kalo dilepas
+    end
 end)
-
 
 -- ==========================================
 -- DETEKSI TOOL (COIL) SAAT RECORD
@@ -118,7 +118,7 @@ local function StartRecording(isResume)
     hrp.Anchored = false 
     
     if not isResume then 
-        table.clear(Data.Path)
+        Data.Path = {}
         Data.TotalRecordTime = 0
         UpdateInfoUI()
         SendNotif("🔴 RECORD", "Mulai merekam jejak!") 
@@ -221,8 +221,8 @@ local function PlayRecord()
         local step = Data.Path[Data.CurrentNode]
         
         -- ⚡ CEK SETTING UI LU BERDASARKAN TOOL YANG DIREKAM
-        local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or humanoid.WalkSpeed
-        local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or humanoid.JumpPower
+        local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or 16
+        local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or 50
         
         if step.Tool == Data.CoilSettings.Coil1Name then
             targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or targetWS
@@ -233,6 +233,7 @@ local function PlayRecord()
         end
         
         humanoid.WalkSpeed = targetWS
+        humanoid.UseJumpPower = true
         humanoid.JumpPower = targetJP
 
         local targetPos = step.Position
@@ -298,7 +299,7 @@ end
 -- ==========================================
 -- 3. BINDING TOMBOL KE LOGIC
 -- ==========================================
-if UI then
+if UI and UI.BtnRecord then
     UI.BtnRecord.MouseButton1Click:Connect(function()
         if not Data.IsRecording then StartRecording(false); UI.BtnRecord.Text = "⏹ STOP REC" else StopRecording(); UI.BtnRecord.Text = "⏺ RECORD"; SendNotif("✅ SELESAI", "Record dihentikan!") end
     end)
