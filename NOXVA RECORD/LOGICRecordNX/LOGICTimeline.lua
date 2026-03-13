@@ -1,116 +1,98 @@
 -- ==========================================
--- NOXVA HUB - LOGIC TIMELINE CUT & CP (PURE LOGIC)
+-- NOXVA HUB | PURE LOGIC TIMELINE EDITOR
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
-
 local UI = _G.NoxvaWalkUI
 local Data = _G.NoxvaWalkData
-
-if not UI or not Data then
-    warn("Noxva Error: UI atau Data Global belum siap! Logic Timeline dibatalkan.")
-    return
-end
-
+local API = _G.NoxvaWalkAPI
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
+local player = Players.LocalPlayer
 
--- Variabel buat mode "Preview" / Editing
-local PreviewIndex = 1
+if not UI or not Data then return warn("Noxva Error: UI/Data Timeline gagal!") end
 
 local function SendNotif(title, text)
-    game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 3})
-end
-
--- Fungsi buat teleport karakter ke titik yang lagi di-preview
-local function TeleportToPreview()
-    if Data.Path[PreviewIndex] then
-        local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = CFrame.new(Data.Path[PreviewIndex] + Vector3.new(0, 3, 0)) -- Ditambah 3 Y biar gak nyangkut di tanah
-            SendNotif("TIMELINE", "Melihat Titik ke-" .. PreviewIndex .. " dari " .. #Data.Path)
-        end
-    end
+    game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 2})
 end
 
 -- ==========================================
--- LOGIC 1: NEXT & PREV (Maju Mundur Titik)
+-- 1. FUNGSI EDITOR TIMELINE
 -- ==========================================
-UI.BtnNext.MouseButton1Click:Connect(function()
-    if #Data.Path == 0 then SendNotif("ERROR", "Data kosong!") return end
-    if PreviewIndex < #Data.Path then
-        PreviewIndex = PreviewIndex + 1
-        TeleportToPreview()
-    else
-        SendNotif("TIMELINE", "Ini sudah titik paling ujung!")
-    end
-end)
+local function UpdateEditPos()
+    if #Data.Path == 0 or Data.EditIndex == 0 then return end
+    
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    
+    local pos = Data.Path[Data.EditIndex].Position
+    local nextPos = pos
+    if Data.EditIndex < #Data.Path then nextPos = Data.Path[Data.EditIndex + 1].Position end
+    
+    local lookPos = Vector3.new(nextPos.X, pos.Y, nextPos.Z)
+    if (lookPos - pos).Magnitude < 0.1 then lookPos = pos + Vector3.new(0, 0, 1) end
+    
+    hrp.Velocity = Vector3.zero
+    hrp.Anchored = true -- BUG FIX: Cegah jatuh pas ngedit
+    hrp.CFrame = CFrame.lookAt(pos + Vector3.new(0, 1.5, 0), lookPos)
+    
+    SendNotif("🛠️ TIMELINE", "Frame: " .. Data.EditIndex .. " / " .. #Data.Path)
+end
 
-UI.BtnPrev.MouseButton1Click:Connect(function()
-    if #Data.Path == 0 then SendNotif("ERROR", "Data kosong!") return end
-    if PreviewIndex > 1 then
-        PreviewIndex = PreviewIndex - 1
-        TeleportToPreview()
-    else
-        SendNotif("TIMELINE", "Ini sudah titik paling awal!")
+local function StepBack() 
+    if Data.EditIndex > 1 then 
+        Data.EditIndex = Data.EditIndex - 1; UpdateEditPos() 
+    end 
+end
+
+local function StepForward() 
+    if Data.EditIndex < #Data.Path then 
+        Data.EditIndex = Data.EditIndex + 1; UpdateEditPos() 
+    end 
+end
+
+local function TrimAndResume()
+    if #Data.Path == 0 or Data.EditIndex == 0 then return end
+    
+    local newPath = {} 
+    for i = 1, Data.EditIndex do 
+        table.insert(newPath, Data.Path[i]) 
     end
-end)
+    Data.Path = newPath
+    
+    -- BUG FIX: Lepasin Anchored sebelum lanjut jalan
+    local char = player.Character 
+    if char and char:FindFirstChild("HumanoidRootPart") then 
+        char.HumanoidRootPart.Anchored = false 
+    end
+    
+    SendNotif("✂️ TRIM", "Rute dipotong sampai frame " .. Data.EditIndex)
+    if API and API.StartRecord then API.StartRecord(true) end -- Lanjut record
+end
 
 -- ==========================================
--- LOGIC 2: DONE / CUT (Potong Jejak)
+-- 2. BINDING TOMBOL EDITOR
 -- ==========================================
--- Fungsi ini bakal memotong/menghapus semua titik SETELAH titik yang lu liat sekarang.
-UI.BtnDone.MouseButton1Click:Connect(function()
-    if #Data.Path == 0 then return end
+if UI then
+    UI.BtnPrev.MouseButton1Click:Connect(StepBack)
+    UI.BtnNext.MouseButton1Click:Connect(StepForward)
     
-    local oldTotal = #Data.Path
-    local newPath = {}
-    
-    -- Ambil data dari titik 1 sampai titik yang lu preview
-    for i = 1, PreviewIndex do
-        table.insert(newPath, Data.Path[i])
-    end
-    
-    Data.Path = newPath -- Timpa data lama
-    SendNotif("TIMELINE CUT", "Jejak dipotong! Dari " .. oldTotal .. " menjadi " .. #Data.Path .. " titik.")
-end)
-
--- ==========================================
--- LOGIC 3: DROPDOWN CHECKPOINT (CP)
--- ==========================================
--- Kita bikin sistem: Tiap 20 Titik (Nodes) bakal dianggep 1 Checkpoint.
-local function RefreshDropdownCP()
-    if not UI.CPDropdown then return end
-    
-    local CPList = {}
-    local totalCP = math.floor(#Data.Path / 20)
-    
-    if totalCP < 1 then
-        table.insert(CPList, "CP belum terbentuk (Jejak kurang panjang)")
-    else
-        for i = 1, totalCP do
-            table.insert(CPList, "Checkpoint " .. i)
-        end
-    end
-    
-    -- Inject data ke UI Custom Dropdown lu
-    UI.CPDropdown:UpdateList(CPList, function(CPTerpilih)
-        -- Logic saat lu nge-klik CP di dropdown
-        if string.find(CPTerpilih, "Checkpoint") then
-            -- Ambil angka CP-nya (Contoh: "Checkpoint 2" -> diambil angka 2-nya)
-            local cpNum = tonumber(string.match(CPTerpilih, "%d+"))
-            if cpNum then
-                PreviewIndex = cpNum * 20 -- Lompat ke index titiknya
-                TeleportToPreview()
-                SendNotif("TELEPORT CP", "Berhasil melompat ke " .. CPTerpilih)
-            end
-        end
+    UI.BtnDone.MouseButton1Click:Connect(function()
+        TrimAndResume()
+        -- Kalau lu mau nambahin UI EditPanel.Visible = false, masukin di file Window nanti.
     end)
+    
+    -- Opsional: Kalau lu mau buka mode Edit pas klik Dropdown CP
+    if UI.CPDropdown then
+        UI.CPDropdown:UpdateList({"Masuk Mode Edit"}, function()
+            if Data.IsPlaying then
+                Data.IsPlaying = false
+                if Data.Conns.Play then Data.Conns.Play:Disconnect() end
+                UI.BtnPlay.Text = "▶ PLAY"
+            end
+            if API and API.StopRecord then API.StopRecord() end
+            Data.EditIndex = #Data.Path
+            UpdateEditPos()
+        end)
+    end
 end
 
--- Refresh Dropdown CP otomatis setiap kali lu nge-klik UI Timeline
--- Biar datanya selalu update kalau lu abis ngerekam jejak baru.
-UI.BtnNext.MouseButton1Click:Connect(RefreshDropdownCP)
-UI.BtnPrev.MouseButton1Click:Connect(RefreshDropdownCP)
-
-print("Logic Timeline & CP berhasil dimuat!")
-
+print("Logic Timeline (V6 Editor) berhasil dimuat!")
