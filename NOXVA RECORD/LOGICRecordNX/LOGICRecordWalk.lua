@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V11 FINAL - SMOOTH MOMENTUM PHYSICS)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V12 FINAL - ULTRA SMOOTH & MOMENTUM PREDICTION)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -108,8 +108,8 @@ local function StartRecording(isResume)
             UpdateInfoUI()
         end
         
-        -- Toleransi rekam node dinamis tergantung seberapa kenceng larinya
-        local recordGap = math.max(2.5, humanoid.WalkSpeed * 0.05)
+        -- LOGIC BARU: Gap rekam diperlebar biar rute gak terlalu padat (menghindari stutter)
+        local recordGap = math.max(3.5, humanoid.WalkSpeed * 0.08)
         if (hrp.Position - lastPos).Magnitude > recordGap then
             AddNode(hrp.Position, false, humanoid.WalkSpeed)
             lastPos = hrp.Position
@@ -162,15 +162,8 @@ local function PlayRecord()
         local step = Data.Path[Data.CurrentNode]
         if step.Speed then humanoid.WalkSpeed = step.Speed end
         
-        -- LOOK AHEAD: Kalo lari kenceng, bidik node yg lebih depan dikit biar smooth
-        local lookAheadIndex = Data.CurrentNode
         local currentWS = humanoid.WalkSpeed
-        if currentWS > 30 and Data.CurrentNode < #Data.Path then
-            lookAheadIndex = math.min(#Data.Path, Data.CurrentNode + 1)
-        end
-        
-        local targetStep = Data.Path[lookAheadIndex]
-        local targetPos = targetStep.Position
+        local targetPos = step.Position
         local myPos = hrp.Position
         
         local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
@@ -178,7 +171,7 @@ local function PlayRecord()
         local dir = (dist2D > 0.05) and walkDir.Unit or Vector3.zero
         
         local yDiff = targetPos.Y - myPos.Y
-        if yDiff < -20 or dist2D > 30 then
+        if yDiff < -20 or dist2D > 40 then
             hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
             hrp.Velocity = Vector3.zero
             stuckTimer = 0
@@ -189,8 +182,8 @@ local function PlayRecord()
             humanoid:Move(dir, false)
         end
 
-        -- LOGIC MOMENTUM: Toleransi ganti node dilebarin kalo lagi di udara / lari super kenceng
-        local tolerance = math.max(2.5, currentWS * 0.1)
+        -- LOGIC BARU: Toleransi dinaikin drastis biar cornering mulus & ngurangin ngerem mendadak
+        local tolerance = math.max(4.0, currentWS * 0.15)
         local state = humanoid:GetState()
         local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
         
@@ -198,10 +191,10 @@ local function PlayRecord()
             tolerance = tolerance * 1.5 
         end
 
-        if step.IsJumpPoint and dist2D < (tolerance + 2.0) then 
-            if (tick() - lastJumpTime > 0.3) then
-                humanoid.Jump = true
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        -- LOGIC BARU: Antisipasi lompat lebih awal sebelum nyampe titik persisnya
+        if step.IsJumpPoint and dist2D < (tolerance + 3.0) then 
+            if (tick() - lastJumpTime > 0.25) then
+                humanoid.Jump = true -- Cukup pakai native jump biar momentum lari gak putus
                 lastJumpTime = tick()
             end
         end
@@ -211,8 +204,9 @@ local function PlayRecord()
             stuckTimer = 0
         end
 
+        -- LOGIC BARU: Delay stuck teleport dinaikin biar gak ngerusak visual kalau cuma nyangkut dikit
         stuckTimer = stuckTimer + dt
-        if stuckTimer > 1.5 then 
+        if stuckTimer > 2.5 then 
             if not isMidAir then 
                 hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
                 hrp.Velocity = Vector3.zero
