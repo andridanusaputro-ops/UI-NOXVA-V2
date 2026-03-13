@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | RECORD WALK - 100% CLONE WINDOW (MINIMIZE & CLOSE)
+-- NOXVA HUB | RECORD WALK WINDOW (INTEGRATED WITH NOXVA V2)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 
@@ -7,22 +7,27 @@ local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 
+-- 1. LOAD UI UTAMA LU DULU
+local NoxvaLib = _G.NoxvaLib or loadstring(game:HttpGet("https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/main/uiNoxvaV2.lua"))()
+local Window = NoxvaLib:CreateWindow("NOXVA WALK RECORD", Color3.fromRGB(0, 120, 255))
+
+-- Cari ScreenGui "NoxvaHub_Pure" yang barusan dibikin sama library lu
 local successHui, hui = pcall(function() return gethui() end)
 local targetParent = hui or CoreGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui"))
+local NoxvaUI = targetParent:WaitForChild("NoxvaHub_Pure", 5)
 
-if targetParent:FindFirstChild("Noxva_StudioWalk_Clone") then
-    targetParent.Noxva_StudioWalk_Clone:Destroy()
+if not NoxvaUI then
+    warn("❌ [NOXVA ERROR] ScreenGui NoxvaHub_Pure tidak ditemukan! Gagal integrasi.")
+    return
 end
 
-local ScreenGui = Instance.new("ScreenGui", targetParent)
-ScreenGui.Name = "Noxva_StudioWalk_Clone"
-ScreenGui.ResetOnSpawn = false
-
--- GLOBAL EXPORT
+-- ==========================================
+-- GLOBAL EXPORT UNTUK LOGIC
+-- ==========================================
 _G.NoxvaWalkUI = _G.NoxvaWalkUI or {}
 
 -- ==========================================
--- FUNGSI DRAGGABLE
+-- FUNGSI DRAGGABLE UNTUK WIDGET
 -- ==========================================
 local function MakeDraggable(Frame, DragArea)
     local dragToggle, dragInput, dragStart, startPos
@@ -46,10 +51,11 @@ local function MakeDraggable(Frame, DragArea)
 end
 
 -- ==========================================
--- TEMPLATE BUILDER (PANEL POP-UP)
+-- TEMPLATE BUILDER FLOATING PANEL
 -- ==========================================
 local function CreatePanel(Name, TitleText, Pos, SizeX)
-    local Panel = Instance.new("Frame", ScreenGui)
+    -- Panelnya kita tempel di NoxvaUI punya lu, bukan bikin ScreenGui baru!
+    local Panel = Instance.new("Frame", NoxvaUI)
     Panel.Name = Name
     Panel.Size = UDim2.new(0, SizeX, 0, 0)
     Panel.Position = Pos
@@ -140,54 +146,13 @@ local function CreateRow(Parent)
 end
 
 -- ==========================================
--- LOGO SCRIPT (MINIMIZED STATE)
+-- PEMBUATAN FLOATING PANELS (STUDIOWALK CLONE)
 -- ==========================================
-local LogoMenu = Instance.new("TextButton", ScreenGui)
-LogoMenu.Size = UDim2.new(0, 45, 0, 45)
-LogoMenu.Position = UDim2.new(0.5, -22, 0, 10)
-LogoMenu.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-LogoMenu.BackgroundTransparency = 0.2
-LogoMenu.Text = "N"
-LogoMenu.TextColor3 = Color3.fromRGB(150, 255, 100)
-LogoMenu.Font = Enum.Font.GothamBlack
-LogoMenu.TextSize = 24
-LogoMenu.Visible = false
-Instance.new("UICorner", LogoMenu).CornerRadius = UDim.new(1, 0) -- Bikin bulat
-local LogoStroke = Instance.new("UIStroke", LogoMenu)
-LogoStroke.Color = Color3.fromRGB(150, 255, 100)
-LogoStroke.Thickness = 1.5
-MakeDraggable(LogoMenu)
 
--- ==========================================
--- FLOATING TOGGLE MENU (MENU PATEN TENGAH)
--- ==========================================
-local TopMenu = Instance.new("Frame", ScreenGui)
-TopMenu.Size = UDim2.new(0, 220, 0, 35)
-TopMenu.Position = UDim2.new(0.5, -110, 0, 10) 
-TopMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-TopMenu.BackgroundTransparency = 0.2
-Instance.new("UICorner", TopMenu).CornerRadius = UDim.new(0, 8)
-Instance.new("UIStroke", TopMenu).Color = Color3.fromRGB(150, 255, 100)
-MakeDraggable(TopMenu)
-
-local MenuLayout = Instance.new("UIListLayout", TopMenu)
-MenuLayout.FillDirection = Enum.FillDirection.Horizontal
-MenuLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-MenuLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-MenuLayout.Padding = UDim.new(0, 6)
-
--- ==========================================
 -- 1. PANEL VIP (KIRI)
--- ==========================================
-local P_VIP, C_VIP = CreatePanel("Panel_VIP", "STUDIOWALK VIP", UDim2.new(0.05, 0, 0.3, 0), 200)
-
+local P_VIP, C_VIP = CreatePanel("Widget_VIP", "STUDIOWALK VIP", UDim2.new(0.05, 0, 0.3, 0), 200)
 local StatusTxt = Instance.new("TextLabel", C_VIP)
-StatusTxt.Size = UDim2.new(1, 0, 0, 30)
-StatusTxt.BackgroundTransparency = 1
-StatusTxt.Text = "CP 0"
-StatusTxt.TextColor3 = Color3.fromRGB(100, 200, 255)
-StatusTxt.Font = Enum.Font.GothamBlack
-StatusTxt.TextSize = 22
+StatusTxt.Size = UDim2.new(1, 0, 0, 30); StatusTxt.BackgroundTransparency = 1; StatusTxt.Text = "CP 0"; StatusTxt.TextColor3 = Color3.fromRGB(100, 200, 255); StatusTxt.Font = Enum.Font.GothamBlack; StatusTxt.TextSize = 22
 _G.NoxvaWalkUI.StatusLabel = StatusTxt
 
 local RowV1 = CreateRow(C_VIP)
@@ -198,11 +163,8 @@ local RowV2 = CreateRow(C_VIP)
 _G.NoxvaWalkUI.BtnRewind = C_Btn(RowV2, "⏪ REWIND", 85, Color3.fromRGB(40, 140, 180))
 _G.NoxvaWalkUI.BtnPass   = C_Btn(RowV2, "⏭ PASS", 85, Color3.fromRGB(40, 180, 80))
 
--- ==========================================
 -- 2. PANEL CONTROLS (KANAN)
--- ==========================================
-local P_Ctrl, C_Ctrl = CreatePanel("Panel_Ctrl", "STUDIOWALK CONTROLS", UDim2.new(0.75, 0, 0.3, 0), 200)
-
+local P_Ctrl, C_Ctrl = CreatePanel("Widget_Ctrl", "STUDIOWALK CONTROLS", UDim2.new(0.75, 0, 0.3, 0), 200)
 local RowC1 = CreateRow(C_Ctrl)
 _G.NoxvaWalkUI.BtnPlay = C_Btn(RowC1, "▶ PLAY", 85, Color3.fromRGB(40, 180, 80))
 _G.NoxvaWalkUI.BtnLoop = C_Btn(RowC1, "🔄 LOOP", 85, Color3.fromRGB(40, 180, 80))
@@ -211,26 +173,13 @@ local RowC2 = CreateRow(C_Ctrl)
 _G.NoxvaWalkUI.BtnSpeed = C_Btn(RowC2, "⚡ SPEED 1x", 175, Color3.fromRGB(60, 60, 60))
 
 local InfoTxt = Instance.new("TextLabel", C_Ctrl)
-InfoTxt.Size = UDim2.new(1, 0, 0, 20)
-InfoTxt.BackgroundTransparency = 1
-InfoTxt.Text = "Nodes: 0 | 00:00"
-InfoTxt.TextColor3 = Color3.fromRGB(200, 200, 200)
-InfoTxt.Font = Enum.Font.Gotham
-InfoTxt.TextSize = 11
+InfoTxt.Size = UDim2.new(1, 0, 0, 20); InfoTxt.BackgroundTransparency = 1; InfoTxt.Text = "Nodes: 0 | 00:00"; InfoTxt.TextColor3 = Color3.fromRGB(200, 200, 200); InfoTxt.Font = Enum.Font.Gotham; InfoTxt.TextSize = 11
 _G.NoxvaWalkUI.InfoLabel = InfoTxt
 
--- ==========================================
--- 3. PANEL FILE MANAGER (TENGAH / TAB BARU)
--- ==========================================
-local P_File, C_File = CreatePanel("Panel_File", "FILE MANAGER", UDim2.new(0.4, 0, 0.4, 0), 180)
-
+-- 3. PANEL FILE MANAGER (TENGAH)
+local P_File, C_File = CreatePanel("Widget_File", "FILE MANAGER", UDim2.new(0.4, 0, 0.4, 0), 180)
 local FileNameInput = Instance.new("TextBox", C_File)
-FileNameInput.Size = UDim2.new(0, 150, 0, 30)
-FileNameInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-FileNameInput.Text = "Rute_1"
-FileNameInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-FileNameInput.Font = Enum.Font.Gotham
-FileNameInput.TextSize = 12
+FileNameInput.Size = UDim2.new(0, 150, 0, 30); FileNameInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30); FileNameInput.Text = "Rute_1"; FileNameInput.TextColor3 = Color3.fromRGB(255, 255, 255); FileNameInput.Font = Enum.Font.Gotham; FileNameInput.TextSize = 12
 Instance.new("UICorner", FileNameInput).CornerRadius = UDim.new(0, 5)
 Instance.new("UIStroke", FileNameInput).Color = Color3.fromRGB(100, 100, 100)
 _G.NoxvaWalkUI.InputFileName = FileNameInput
@@ -240,59 +189,39 @@ _G.NoxvaWalkUI.BtnSave = C_Btn(RowF1, "💾 SAVE", 70, Color3.fromRGB(40, 180, 8
 _G.NoxvaWalkUI.BtnLoad = C_Btn(RowF1, "📂 LOAD", 70, Color3.fromRGB(180, 120, 30))
 
 -- ==========================================
--- LOGIC TOMBOL MENU PATEN (TENGAH ATAS)
+-- TAB UI NOXVA (UNTUK MANAGE WIDGET)
 -- ==========================================
-local BtnToggleVIP = C_Btn(TopMenu, "👑 VIP", 45, Color3.fromRGB(40, 40, 40))
-BtnToggleVIP.MouseButton1Click:Connect(function() P_VIP.Visible = not P_VIP.Visible end)
+local WalkTab = Window:MakeTab("🏃 VIP Walk")
 
-local BtnToggleCtrl = C_Btn(TopMenu, "🎮 CTRL", 50, Color3.fromRGB(40, 40, 40))
-BtnToggleCtrl.MouseButton1Click:Connect(function() P_Ctrl.Visible = not P_Ctrl.Visible end)
+WalkTab:AddSection("WIDGET MANAGER")
 
-local BtnToggleFile = C_Btn(TopMenu, "📁 FILE", 50, Color3.fromRGB(40, 40, 40))
-BtnToggleFile.MouseButton1Click:Connect(function() P_File.Visible = not P_File.Visible end)
+WalkTab:AddDoubleButton("Tampilkan VIP Panel", function() 
+    P_VIP.Visible = true 
+end, "Sembunyikan VIP Panel", function() 
+    P_VIP.Visible = false 
+end)
 
-local BtnMinimize = C_Btn(TopMenu, "-", 25, Color3.fromRGB(60, 60, 60))
-local BtnCloseUI = C_Btn(TopMenu, "X", 25, Color3.fromRGB(180, 40, 40))
+WalkTab:AddDoubleButton("Tampilkan Controls", function() 
+    P_Ctrl.Visible = true 
+end, "Sembunyikan Controls", function() 
+    P_Ctrl.Visible = false 
+end)
 
--- State untuk nyimpen tab mana aja yang lagi kebuka sblm di minimize
-local OpenStates = {VIP = true, Ctrl = true, File = false}
+WalkTab:AddDoubleButton("Tampilkan File Manager", function() 
+    P_File.Visible = true 
+end, "Sembunyikan File Manager", function() 
+    P_File.Visible = false 
+end)
 
-BtnMinimize.MouseButton1Click:Connect(function()
-    -- Simpan state tab yang lagi kebuka
-    OpenStates.VIP = P_VIP.Visible
-    OpenStates.Ctrl = P_Ctrl.Visible
-    OpenStates.File = P_File.Visible
-    
-    -- Sembunyikan semua
+WalkTab:AddSection("QUICK ACTIONS")
+WalkTab:AddButton("Sembunyikan Semua Widget", function()
     P_VIP.Visible = false
     P_Ctrl.Visible = false
     P_File.Visible = false
-    TopMenu.Visible = false
-    
-    -- Munculin Logo
-    LogoMenu.Visible = true
 end)
 
-LogoMenu.MouseButton1Click:Connect(function()
-    -- Sembunyikan Logo
-    LogoMenu.Visible = false
-    
-    -- Munculin Menu Utama & Tab yang tadi kebuka
-    TopMenu.Visible = true
-    P_VIP.Visible = OpenStates.VIP
-    P_Ctrl.Visible = OpenStates.Ctrl
-    P_File.Visible = OpenStates.File
-end)
+Window:MakeConfigTab()
 
-BtnCloseUI.MouseButton1Click:Connect(function()
-    -- Pengaman biar logic bot mati total kalo di-close
-    if _G.NoxvaWalkData then
-        _G.NoxvaWalkData.IsRecording = false
-        _G.NoxvaWalkData.IsPlaying = false
-    end
-    -- Hancurkan UI
-    ScreenGui:Destroy()
-end)
-
+-- Menampilkan otomatis saat diload
 P_VIP.Visible = true
 P_Ctrl.Visible = true
