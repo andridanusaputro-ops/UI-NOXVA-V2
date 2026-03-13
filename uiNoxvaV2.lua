@@ -1,6 +1,6 @@
 -- ==========================================
 -- NOXVA UI ENGINE | PURE CORE LIBRARY V2.8
--- DEVELOPED BY DANZY (COMPACT + ROUNDED LOGO + WEBHOOK + MULTI-SAVE ISOLATION)
+-- DEVELOPED BY DANZY 
 -- ==========================================
 local NoxvaLib = {}
 NoxvaLib.Flags = {} 
@@ -53,18 +53,18 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     NotifLayout.Padding = UDim.new(0, 10)
 
     -- ==========================================
-    -- FPS & PING TRACKER (LOCKED KIRI ATAS, WARNA PUTIH, TANPA FRAME)
+    -- FPS & PING TRACKER
     -- ==========================================
     local FloatingStats = Instance.new("TextLabel", NoxvaUI)
     FloatingStats.Name = "FPS_Ping_Tracker"
     FloatingStats.Size = UDim2.new(0, 200, 0, 20)
-    FloatingStats.Position = UDim2.new(0, 15, 0, 15) -- Pojok Kiri Atas
+    FloatingStats.Position = UDim2.new(0, 15, 0, 15) 
     FloatingStats.BackgroundTransparency = 1
-    FloatingStats.TextColor3 = Color3.fromRGB(255, 255, 255) -- Warna Putih
+    FloatingStats.TextColor3 = Color3.fromRGB(255, 255, 255) 
     FloatingStats.Font = Enum.Font.GothamBold
     FloatingStats.TextSize = 12
     FloatingStats.TextXAlignment = Enum.TextXAlignment.Left
-    FloatingStats.TextStrokeTransparency = 0.5 -- Biar kebaca walau background cerah
+    FloatingStats.TextStrokeTransparency = 0.5 
 
     -- ==========================================
     -- LOGO KOTAK MELENGKUNG SAAT DI-CLOSE
@@ -90,7 +90,7 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     LogoClicker.Text = ""
 
     -- ==========================================
-    -- MAIN FRAME (SIZE COMPACT: 480x310)
+    -- MAIN FRAME
     -- ==========================================
     local MainFrame = Instance.new("Frame", NoxvaUI)
     MainFrame.Size = UDim2.new(0, 480, 0, 310) 
@@ -151,11 +151,103 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
         end
     end)
 
+    local function AddRipple(button)
+        button.MouseButton1Down:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0.5}):Play() end)
+        button.MouseButton1Up:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end)
+        button.MouseLeave:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end)
+    end
+
     local CloseBtn = Instance.new("TextButton", TopBar)
     CloseBtn.Size = UDim2.new(0, 30, 0, 30); CloseBtn.Position = UDim2.new(1, -35, 0, 5)
     CloseBtn.BackgroundTransparency = 1; CloseBtn.Text = "×"; CloseBtn.TextColor3 = Color3.fromRGB(255, 50, 50)
     CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.TextSize = 20
-    CloseBtn.MouseButton1Click:Connect(function() NoxvaUI:Destroy() end)
+
+    -- ==========================================
+    -- ⚠️ SYSTEM EXIT CONFIRMATION DIALOG ⚠️
+    -- ==========================================
+    local ConfirmOverlay = Instance.new("Frame", NoxvaUI)
+    ConfirmOverlay.Size = UDim2.new(1, 0, 1, 0)
+    ConfirmOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    ConfirmOverlay.BackgroundTransparency = 1
+    ConfirmOverlay.Visible = false
+    ConfirmOverlay.BorderSizePixel = 0
+
+    local ConfirmFrame = Instance.new("Frame", ConfirmOverlay)
+    ConfirmFrame.Size = UDim2.new(0, 320, 0, 150)
+    ConfirmFrame.Position = UDim2.new(0.5, -160, 0.5, -75)
+    ConfirmFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    ConfirmFrame.BackgroundTransparency = 0.05
+    Instance.new("UICorner", ConfirmFrame).CornerRadius = UDim.new(0, 8)
+    local CStroke = Instance.new("UIStroke", ConfirmFrame)
+    CStroke.Color = Color3.fromRGB(255, 60, 60)
+    CStroke.Thickness = 1.5
+
+    local CTitle = Instance.new("TextLabel", ConfirmFrame)
+    CTitle.Size = UDim2.new(1, 0, 0, 30)
+    CTitle.Position = UDim2.new(0, 0, 0, 15)
+    CTitle.BackgroundTransparency = 1
+    CTitle.Text = "⚠️ WARNING ⚠️"
+    CTitle.TextColor3 = Color3.fromRGB(255, 60, 60)
+    CTitle.Font = Enum.Font.GothamBold
+    CTitle.TextSize = 16
+
+    local CDesc = Instance.new("TextLabel", ConfirmFrame)
+    CDesc.Size = UDim2.new(1, -40, 0, 40)
+    CDesc.Position = UDim2.new(0, 20, 0, 45)
+    CDesc.BackgroundTransparency = 1
+    CDesc.Text = "Apakah kamu yakin ingin menutup UI selamanya?\n(Logic yang berjalan akan tetap aktif)"
+    CDesc.TextColor3 = Color3.fromRGB(200, 200, 200)
+    CDesc.Font = Enum.Font.GothamSemibold
+    CDesc.TextSize = 11
+    CDesc.TextWrapped = true
+    CDesc.TextXAlignment = Enum.TextXAlignment.Center
+
+    local BtnAccept = Instance.new("TextButton", ConfirmFrame)
+    BtnAccept.Size = UDim2.new(0.5, -30, 0, 35)
+    BtnAccept.Position = UDim2.new(0, 20, 0, 100)
+    BtnAccept.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    BtnAccept.Text = "Accept (Destroy)"
+    BtnAccept.TextColor3 = Color3.fromRGB(255, 255, 255)
+    BtnAccept.Font = Enum.Font.GothamBold
+    BtnAccept.TextSize = 12
+    Instance.new("UICorner", BtnAccept).CornerRadius = UDim.new(0, 6)
+    AddRipple(BtnAccept)
+
+    local BtnCancel = Instance.new("TextButton", ConfirmFrame)
+    BtnCancel.Size = UDim2.new(0.5, -30, 0, 35)
+    BtnCancel.Position = UDim2.new(0.5, 10, 0, 100)
+    BtnCancel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    BtnCancel.Text = "Cancel"
+    BtnCancel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    BtnCancel.Font = Enum.Font.GothamBold
+    BtnCancel.TextSize = 12
+    Instance.new("UICorner", BtnCancel).CornerRadius = UDim.new(0, 6)
+    AddRipple(BtnCancel)
+
+    -- Logic Tombol Close (X) memanggil Dialog Peringatan
+    CloseBtn.MouseButton1Click:Connect(function()
+        MainFrame.Visible = false
+        ConfirmOverlay.Visible = true
+        TweenService:Create(ConfirmOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
+    end)
+
+    -- Logic Accept (Membunuh UI sepenuhnya)
+    BtnAccept.MouseButton1Click:Connect(function()
+        NoxvaUI:Destroy()
+    end)
+
+    -- Logic Cancel (Membatalkan dan mengembalikan UI)
+    BtnCancel.MouseButton1Click:Connect(function()
+        local hideTween = TweenService:Create(ConfirmOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+        hideTween:Play()
+        hideTween.Completed:Connect(function()
+            ConfirmOverlay.Visible = false
+            MainFrame.Visible = true
+        end)
+    end)
+    -- ==========================================
+    -- END OF CONFIRMATION DIALOG
+    -- ==========================================
 
     local MinBtn = Instance.new("TextButton", TopBar)
     MinBtn.Size = UDim2.new(0, 30, 0, 30); MinBtn.Position = UDim2.new(1, -70, 0, 5)
@@ -163,12 +255,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
     MinBtn.Font = Enum.Font.GothamBold; MinBtn.TextSize = 24
     MinBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false; OpenLogo.Visible = true end)
     LogoClicker.MouseButton1Click:Connect(function() MainFrame.Visible = true; OpenLogo.Visible = false end)
-
-    local function AddRipple(button)
-        button.MouseButton1Down:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0.5}):Play() end)
-        button.MouseButton1Up:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end)
-        button.MouseLeave:Connect(function() TweenService:Create(button, TweenInfo.new(0.15), {TextTransparency = 0}):Play() end)
-    end
 
     local function MakeDraggable(UIElement, DragHandle)
         local dragging, dragInput, dragStart, startPos
@@ -1045,7 +1131,6 @@ function NoxvaLib:CreateWindow(CustomName, CustomColor)
         local ConfTab = WindowFunctions:MakeTab("⚙️ Settings")
         local GameFolder = "NoxvaHub/Configs/" .. tostring(game.PlaceId)
         
-        -- Cek & Bikin Folder Khusus Game Ini
         if makefolder then
             pcall(function()
                 makefolder("NoxvaHub")
