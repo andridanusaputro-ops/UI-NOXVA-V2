@@ -20,12 +20,11 @@ if not NoxvaUI then
 end
 
 -- ==========================================
--- GLOBAL EXPORT & DATA COIL (DIAMBIL DARI INPUT LU)
+-- GLOBAL EXPORT & DATA COIL (FIX TABRAKAN TABLE)
 -- ==========================================
 _G.NoxvaWalkUI = {}
 _G.NoxvaWalkData = _G.NoxvaWalkData or {}
--- Default 0 = Ngikutin speed murni game. Kalo lu isi angka, baru dia nimpa (Override).
-_G.NoxvaWalkData.CoilSettings = {
+_G.NoxvaWalkData.CoilSettings = _G.NoxvaWalkData.CoilSettings or {
     NormalWS = 0, NormalJP = 0,
     Coil1Name = "Speed Coil", Coil1WS = 0, Coil1JP = 0,
     Coil2Name = "Gravity Coil", Coil2WS = 0, Coil2JP = 0
@@ -221,7 +220,7 @@ WalkTab:AddTextbox("WalkSpeed Coil 1 (Isi 0 = Asli)", "0", function(v) _G.NoxvaW
 WalkTab:AddTextbox("JumpPower Coil 1 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil1JP = tonumber(v) or 0 end)
 
 WalkTab:AddSection("⚡ SETTING SPEED (COIL 2)")
-WalkTab:AddTextbox("Nama Item Coil 2", "Gravity Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil2Name = v end)
+WalkTab:AddTextbox("Nama Item Coil 2", "NOXERA", function(v) _G.NoxvaWalkData.CoilSettings.Coil2Name = v end)
 WalkTab:AddTextbox("WalkSpeed Coil 2 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil2WS = tonumber(v) or 0 end)
 WalkTab:AddTextbox("JumpPower Coil 2 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil2JP = tonumber(v) or 0 end)
 
