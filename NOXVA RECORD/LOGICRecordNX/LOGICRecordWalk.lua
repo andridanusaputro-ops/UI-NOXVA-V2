@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX LOMPAT PANIK & NYANGKUT)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FINAL PERFECT PHYSICS)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -40,7 +40,7 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REAL-TIME SPEED ENFORCER 
+-- REAL-TIME SPEED ENFORCER
 -- ==========================================
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
@@ -67,7 +67,7 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     if targetWS > 0 then 
         hum.WalkSpeed = targetWS 
     else
-        hum.WalkSpeed = 16 
+        hum.WalkSpeed = 16
     end
     
     if targetJP > 0 then 
@@ -100,7 +100,7 @@ local function AddNode(pos, isJump)
 end
 
 -- ==========================================
--- 1. FUNGSI RECORDING (FIX SENSITIVITAS LOMPAT)
+-- 1. FUNGSI RECORDING
 -- ==========================================
 local function StopRecording()
     Data.IsRecording = false
@@ -135,7 +135,6 @@ local function StartRecording(isResume)
     end)
     
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
-        -- FIX: Gak usah ngecek IsGrounded ketat-ketat, pokoknya lu mencet lompat = rekam!
         if Data.IsRecording and (tick() - lastJumpTime) > 0.4 then 
             lastJumpTime = tick()
             AddNode(hrp.Position, true)
@@ -172,7 +171,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (FIX LOMPAT PANIK)
+-- 2. FUNGSI PLAYBACK (FINAL AIR DASH & MANTLE PHYSICS)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -249,14 +248,19 @@ local function PlayRecord()
             
             if not isMidAir then
                 local targetVelY = hrp.Velocity.Y
-                if yDiff > 1.2 then
-                    targetVelY = math.max(targetVelY, 15) 
+                
+                -- FIX: MANJAT PAKSA (Kalo nabrak objek/tanjakan dan butuh naik)
+                if yDiff > 1.0 then
+                    humanoid.Jump = true 
+                    targetVelY = math.max(targetVelY, targetJP * 0.8) -- Pake JP buat dorong naik
                 elseif yDiff < -5 and dist2D < 4 then
                     targetVelY = -60 
                 end
                 hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
             else
-                hrp.Velocity = Vector3.new(dir.X * targetWS, hrp.Velocity.Y, dir.Z * targetWS)
+                -- FIX: LOMPAT GAK NYAMPE (Air Dash)
+                -- Kita kasih boost 20% khusus di udara biar dia melesat nutupin jarak rute, tapi Y biarin gravitasi.
+                hrp.Velocity = Vector3.new(dir.X * (targetWS * 1.2), hrp.Velocity.Y, dir.Z * (targetWS * 1.2))
             end
             
             if dist2D > 0.5 then 
@@ -267,21 +271,15 @@ local function PlayRecord()
 
         local tolerance = math.max(2.5, targetWS * 0.05)
         
-        -- ==================================================
-        -- FIX: LOMPAT PANIK DEKET TANGGA & ANTI NYANGKUT
-        -- ==================================================
-        -- 1. Trigger lompat kita awalin dikit biar gak keburu nabrak (tolerance + 2.5)
-        if step.IsJumpPoint and dist2D < (tolerance + 2.5) then 
-            if tick() - lastJumpTime > 0.3 then
-                -- 2. PAKSA LOMPAT: Gak usah ngecek dia lagi isMidAir apa gak, sikat aja!
+        -- MURNI LOMPAT DARI RECORD LU (Ditambah Extra Power kalo objeknya tinggi)
+        if step.IsJumpPoint and dist2D < (tolerance + 2.0) then 
+            if not isMidAir and (tick() - lastJumpTime > 0.3) then
                 humanoid.Jump = true
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 
-                -- 3. BOOST NAIK: Kalo targetnya lebih tinggi (tangga/platform), kasih dorongan Y!
-                if yDiff > 0.5 then
-                    hrp.Velocity = Vector3.new(hrp.Velocity.X, math.max(hrp.Velocity.Y, targetJP * 0.8), hrp.Velocity.Z)
-                end
-                
+                local yBoost = (yDiff > 0.5) and (targetJP * 1.1) or targetJP
+                -- Ledakan awal pas mulai lompat
+                hrp.Velocity = Vector3.new(dir.X * (targetWS * 1.3), yBoost, dir.Z * (targetWS * 1.3))
                 lastJumpTime = tick()
             end
         end
