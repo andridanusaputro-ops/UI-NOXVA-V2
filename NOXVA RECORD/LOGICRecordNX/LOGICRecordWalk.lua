@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V7 ENGINE - REALTIME DYNAMIC PLAYBACK)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V8 ENGINE FINAL - ABSOLUTE PERFECTION)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -40,11 +40,35 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- ⚡ REAL-TIME SCANNER (MUTLAK 24 JAM!) ⚡
+-- MESIN SPEED PINTAR (BISA BACA UI LU DENGAN BENAR!)
 -- ==========================================
+local function GetTargetSpeed(toolName)
+    -- Ambil Normal Speed dari UI, atau pake 16 kalau kosong
+    local defaultWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or 16
+    local defaultJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or 50
+
+    local targetWS = defaultWS
+    local targetJP = defaultJP
+
+    -- Cek apakah dia megang Coil 1 atau Coil 2
+    if toolName == Data.CoilSettings.Coil1Name then
+        -- Kalau UI Coil 1 diisi angka, pake angka itu. Kalau 0, balik ke Normal Speed.
+        targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or defaultWS
+        targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or defaultJP
+    elseif toolName == Data.CoilSettings.Coil2Name then
+        -- Kalau UI Coil 2 diisi angka, pake angka itu. Kalau 0, balik ke Normal Speed.
+        targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or defaultWS
+        targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or defaultJP
+    end
+
+    return targetWS, targetJP
+end
+
+-- REALTIME SPEED ENFORCER (Terapin Speed ke karakter saat lu main/test)
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
-    -- GAK ADA LAGI "if IsPlaying then return". SCANNER INI HIDUP TERUS!
+    -- Kalau lagi Play, Mesin Play yang ngatur speednya, jadi ini stop dulu
+    if Data.IsPlaying then return end 
     
     local char = player.Character
     local hum = char and char:FindFirstChild("Humanoid")
@@ -52,38 +76,36 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
 
     local tool = char:FindFirstChildOfClass("Tool")
     local toolName = tool and tool.Name or "None"
+    
+    local targetWS, targetJP = GetTargetSpeed(toolName)
 
-    -- Default Bawaan Game Kalo Gak Di-Custom UI
-    local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or 16
-    local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or 50
-
-    if toolName == Data.CoilSettings.Coil1Name then
-        targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or targetWS
-        targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or targetJP
-    elseif toolName == Data.CoilSettings.Coil2Name then
-        targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or targetWS
-        targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or targetJP
-    end
-
-    -- Detik itu juga paksa speed karakternya (Mau lagi Record, Play, atau Diem!)
     hum.WalkSpeed = targetWS
     hum.UseJumpPower = true 
     hum.JumpPower = targetJP
 end)
 
 -- ==========================================
--- DETEKSI TITIK SAAT RECORD
+-- DETEKSI TOOL (COIL) SAAT RECORD
 -- ==========================================
+local function GetEquippedTool()
+    local char = player.Character
+    if char then
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool then return tool.Name end
+    end
+    return "None"
+end
+
 local function AddNode(pos, isJump)
     table.insert(Data.Path, {
         Position = pos, 
-        IsJumpPoint = isJump
-        -- Udah gak perlu nyimpen nama Tool ke JSON, karena Speed udah di-handle 100% Realtime!
+        IsJumpPoint = isJump,
+        Tool = GetEquippedTool() -- HANYA SIMPAN NAMA TOOL
     })
 end
 
 -- ==========================================
--- 1. FUNGSI RECORDING
+-- 1. FUNGSI RECORDING (FIX LOMPAT)
 -- ==========================================
 local function StopRecording()
     Data.IsRecording = false
@@ -118,7 +140,10 @@ local function StartRecording(isResume)
     end)
     
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
-        if Data.IsRecording and (tick() - lastJumpTime) > 0.4 then 
+        -- FIX: Cek apakah dia beneran di tanah, biar gak ngerekam lompat panik di udara
+        local state = humanoid:GetState()
+        local isGrounded = (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics or state == Enum.HumanoidStateType.Landed)
+        if Data.IsRecording and isGrounded and (tick() - lastJumpTime) > 0.5 then 
             lastJumpTime = tick()
             AddNode(hrp.Position, true)
             lastPos = hrp.Position
@@ -154,7 +179,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (FIX DINAMIS & FISIKA)
+-- 2. FUNGSI PLAYBACK (FIX SEMUA BUG)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -178,7 +203,7 @@ local function PlayRecord()
     
     stuckTimer = 0
     Data.IsPlaying = true
-    humanoid.AutoRotate = false 
+    humanoid.AutoRotate = false -- MATIIN BIAR JALANNYA LURUS
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
@@ -199,6 +224,14 @@ local function PlayRecord()
         end
 
         local step = Data.Path[Data.CurrentNode]
+        
+        -- AMBIL SPEED DARI FUNGSI PINTAR
+        local targetWS, targetJP = GetTargetSpeed(step.Tool)
+
+        humanoid.WalkSpeed = targetWS
+        humanoid.UseJumpPower = true
+        humanoid.JumpPower = targetJP
+
         local targetPos = step.Position
         local myPos = hrp.Position
         
@@ -210,46 +243,44 @@ local function PlayRecord()
         local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
         local yDiff = targetPos.Y - myPos.Y
 
-        -- Ambil speed dari karakter (karena udah diurus otomatis sama RealtimeSpeed)
-        local currentWS = humanoid.WalkSpeed
-
-        -- =========================================================
-        -- ANTI BUTA RUTE (JATOH KE JURANG)
-        -- =========================================================
+        -- ANTI JATUH KE JURANG
         if dist2D > 30 or yDiff < -20 then
             hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
-            hrp.Velocity = Vector3.zero 
+            hrp.Velocity = Vector3.zero
             stuckTimer = 0
-            return 
+            return
         end
 
         if dir ~= Vector3.zero then
+            -- JALAN MURNI PAKE ROBLOX PHYSICS
             humanoid:Move(dir, false)
             
             if not isMidAir then
+                -- FIX TANGGA/TANJAKAN: Kasih dorongan Y dikit biar gak nyangkut
                 local targetVelY = hrp.Velocity.Y
                 if yDiff > 1.2 then
-                    targetVelY = math.max(targetVelY, humanoid.JumpPower * 0.8) 
+                    targetVelY = math.max(targetVelY, targetJP * 0.8) 
                 elseif yDiff < -5 and dist2D < 4 then
                     targetVelY = -60 
                 end
-                hrp.Velocity = Vector3.new(dir.X * currentWS, targetVelY, dir.Z * currentWS)
+                hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
             else
-                -- Kalau di udara, HARAM sentuh Velocity X Z biar lompatan murni dan gak bablas
+                -- DI UDARA HARAM SENTUH VELOCITY X & Z, BIAR LOMPATNYA MURNI DAN GAK BABLAS
             end
-            
-            if dist2D > 0.5 then 
-                local freshPos = hrp.Position
-                hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
+
+            -- FIX MELENCENG: Paksa ngadep lurus ke titik target
+            if dist2D > 0.5 then
+                local lookCFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z))
+                hrp.CFrame = lookCFrame
             end
         end
 
-        -- Radius dilebarin sedikit otomatis ngikutin speed lu saat ini biar nikungnya gak kepeleset
-        local tolerance = math.max(2.5, currentWS * 0.05)
+        -- RADIUS FIX: Gak usah dinamis, biar dia murni ngelewatin titik yang direkam
+        local tolerance = 2.0
         
-        -- Murni trigger lompat dari JSON
-        if step.IsJumpPoint and dist2D < (tolerance + 1.5) then 
-            if not isMidAir and (tick() - lastJumpTime > 0.3) then
+        -- LOMPAT MUTLAK
+        if step.IsJumpPoint and dist2D < (tolerance + 2.0) then 
+            if not isMidAir and (tick() - lastJumpTime > 0.5) then
                 humanoid.Jump = true
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 lastJumpTime = tick()
@@ -274,7 +305,7 @@ local function PlayRecord()
 end
 
 -- ==========================================
--- 3. BINDING TOMBOL KE LOGIC
+-- 3. BINDING TOMBOL KE LOGIC & FIX JSON
 -- ==========================================
 if UI and UI.BtnRecord then
     UI.BtnRecord.MouseButton1Click:Connect(function()
@@ -294,7 +325,8 @@ if UI and UI.BtnRecord then
             for _, step in ipairs(Data.Path) do 
                 table.insert(savablePath, {
                     x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
-                    IsJumpPoint = step.IsJumpPoint
+                    IsJumpPoint = step.IsJumpPoint,
+                    Tool = step.Tool
                 }) 
             end
             writefile(ConfigFolder.."/NOXVA_Route.json", HttpService:JSONEncode(savablePath)) 
@@ -310,7 +342,8 @@ if UI and UI.BtnRecord then
                 for _, step in ipairs(decoded) do 
                     table.insert(Data.Path, {
                         Position = Vector3.new(step.x, step.y, step.z), 
-                        IsJumpPoint = step.IsJumpPoint
+                        IsJumpPoint = step.IsJumpPoint,
+                        Tool = step.Tool or "None"
                     }) 
                 end
                 Data.TotalRecordTime = #Data.Path * (1/60) 
@@ -324,7 +357,7 @@ if UI and UI.BtnRecord then
         if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
         local s = "local Route = {\n"
         for _,v in ipairs(Data.Path) do 
-            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint)) 
+            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, \"%s\"},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Tool or "None") 
         end
         s = s.."}\nreturn Route"
         if writefile then writefile(ConfigFolder.."/NOXVA_Script_Export.lua", s); SendNotif("✅ EXPORT", "Script berhasil di-export murni!")
