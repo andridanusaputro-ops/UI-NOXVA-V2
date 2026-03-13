@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V14 FINAL - LOOK-AHEAD SMOOTHING)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V15 FINAL - ANTI-SPAM FRAME & REWIND FEATURE)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -42,11 +42,13 @@ end
 -- ==========================================
 -- 1. FUNGSI RECORDING (MURNI & SENSITIF)
 -- ==========================================
-local function AddNode(pos, isJump, walkSpeed)
+-- FIX: Tambahin parameter waktu (recTime) buat fitur Rewind
+local function AddNode(pos, isJump, walkSpeed, recTime)
     table.insert(Data.Path, {
         Position = pos, 
         IsJumpPoint = isJump,
-        Speed = walkSpeed or 16
+        Speed = walkSpeed or 16,
+        Time = recTime or Data.TotalRecordTime
     })
 end
 
@@ -85,7 +87,7 @@ local function StartRecording(isResume)
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
         if Data.IsRecording and (tick() - lastJumpTime) > 0.3 then 
             lastJumpTime = tick()
-            AddNode(hrp.Position, true, humanoid.WalkSpeed)
+            AddNode(hrp.Position, true, humanoid.WalkSpeed, Data.TotalRecordTime)
             lastPos = hrp.Position
             UpdateInfoUI()
         end
@@ -93,7 +95,7 @@ local function StartRecording(isResume)
     
     Data.Conns.State = humanoid.StateChanged:Connect(function(oldState, newState)
         if Data.IsRecording and newState == Enum.HumanoidStateType.Landed then
-            AddNode(hrp.Position, false, humanoid.WalkSpeed)
+            AddNode(hrp.Position, false, humanoid.WalkSpeed, Data.TotalRecordTime)
             lastPos = hrp.Position
             UpdateInfoUI()
         end
@@ -108,13 +110,36 @@ local function StartRecording(isResume)
             UpdateInfoUI()
         end
         
-        -- Gap dinaikin dikit buat ngurangin node spam
-        local recordGap = math.max(3.5, humanoid.WalkSpeed * 0.1)
-        if (hrp.Position - lastPos).Magnitude > recordGap then
-            AddNode(hrp.Position, false, humanoid.WalkSpeed)
+        local lastNodeTime = (#Data.Path > 0) and Data.Path[#Data.Path].Time or 0
+        local timePassed = Data.TotalRecordTime - lastNodeTime
+        
+        -- FIX V15: Dynamic Gap + Time Throttle (Anti-Spam Frame)
+        local recordGap = math.max(4.0, humanoid.WalkSpeed * 0.15)
+        local dist = (hrp.Position - lastPos).Magnitude
+        
+        -- Cuma rekam kalau jeda waktu > 0.15 detik biar engine gak patah-patah ngitung arah
+        if dist > recordGap and timePassed > 0.15 then
+            AddNode(hrp.Position, false, humanoid.WalkSpeed, Data.TotalRecordTime)
             lastPos = hrp.Position
         end
     end)
+end
+
+-- FITUR BARU: REWIND (Potong Rute)
+local function RewindRecord(secondsToRewind)
+    if not Data.IsRecording or #Data.Path == 0 then 
+        SendNotif("⚠️ REWIND", "Harus lagi nge-record buat potong rute!")
+        return 
+    end
+    
+    local targetTime = Data.TotalRecordTime - secondsToRewind
+    while #Data.Path > 0 and Data.Path[#Data.Path].Time > targetTime do
+        table.remove(Data.Path)
+    end
+    
+    Data.TotalRecordTime = math.max(0, targetTime)
+    UpdateInfoUI()
+    SendNotif("⏪ REWIND", "Mundur " .. secondsToRewind .. " detik! Siap lanjutin rute!")
 end
 
 -- ==========================================
@@ -168,7 +193,6 @@ local function PlayRecord()
         local currentWS = humanoid.WalkSpeed
         local myPos = hrp.Position
         
-        -- 1. CEK JARAK KE NODE SAAT INI
         local distToCurrent = (Data.Path[Data.CurrentNode].Position - myPos).Magnitude
         local tolerance = math.max(4.0, currentWS * 0.1)
         
@@ -179,8 +203,6 @@ local function PlayRecord()
             tolerance = tolerance * 1.5 
         end
 
-        -- 2. OVERSHOOT & TOLERANCE HANDLER (Majuin Node)
-        -- Kalau kita udah deket node, atau terlanjur kelewatan (node selanjutnya lebih deket), majuin!
         while Data.CurrentNode < #Data.Path do
             local currentDist = (Data.Path[Data.CurrentNode].Position - myPos).Magnitude
             local nextDist = (Data.Path[Data.CurrentNode + 1].Position - myPos).Magnitude
@@ -198,8 +220,6 @@ local function PlayRecord()
         
         if Data.CurrentNode > #Data.Path then return end
         
-        -- 3. LOOK-AHEAD TARGET (CARROT ON A STICK)
-        -- Cari node di depan buat dibidik arahnya biar gak getar
         local lookAheadDist = math.max(6.0, currentWS * 0.25)
         local targetIndex = Data.CurrentNode
         
@@ -218,7 +238,6 @@ local function PlayRecord()
         local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
         local dir = (walkDir.Magnitude > 0.05) and walkDir.Unit or Vector3.zero
         
-        -- ANTI BUTA RUTE JATUH
         local yDiff = Data.Path[Data.CurrentNode].Position.Y - myPos.Y
         if yDiff < -20 or distToCurrent > 40 then
             hrp.CFrame = CFrame.new(Data.Path[Data.CurrentNode].Position + Vector3.new(0, 3, 0))
@@ -231,7 +250,6 @@ local function PlayRecord()
             humanoid:Move(dir, false)
         end
 
-        -- 4. TRIGGER LOMPAT DARI NODE ASLI
         if Data.Path[Data.CurrentNode].IsJumpPoint and distToCurrent < (tolerance + 3.0) then 
             if (tick() - lastJumpTime > 0.25) then
                 humanoid.Jump = true 
@@ -265,6 +283,13 @@ if UI and UI.BtnRecord then
         if Data.IsPlaying then UI.BtnPlay.Text = "⏹ STOP WALK"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(180, 40, 40); PlayRecord()
         else UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90); if Data.Conns.Play then Data.Conns.Play:Disconnect() end; local char = player.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false); char.Humanoid.AutoRotate = true end end 
     end)
+    
+    -- Binding Tombol Rewind/Potong Rute (Asumsi nama UI button-nya BtnRewind)
+    if UI.BtnRewind then
+        UI.BtnRewind.MouseButton1Click:Connect(function()
+            RewindRecord(3) -- Potong 3 detik ke belakang
+        end)
+    end
 
     UI.BtnSave.MouseButton1Click:Connect(function() 
         if writefile then 
@@ -273,7 +298,8 @@ if UI and UI.BtnRecord then
                 table.insert(savablePath, {
                     x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
                     IsJumpPoint = step.IsJumpPoint,
-                    Speed = step.Speed or 16
+                    Speed = step.Speed or 16,
+                    Time = step.Time or 0
                 }) 
             end
             writefile(ConfigFolder.."/NOXVA_Route.json", HttpService:JSONEncode(savablePath)) 
@@ -290,10 +316,11 @@ if UI and UI.BtnRecord then
                     table.insert(Data.Path, {
                         Position = Vector3.new(step.x, step.y, step.z), 
                         IsJumpPoint = step.IsJumpPoint,
-                        Speed = step.Speed or 16
+                        Speed = step.Speed or 16,
+                        Time = step.Time or 0
                     }) 
                 end
-                Data.TotalRecordTime = #Data.Path * (1/60) 
+                Data.TotalRecordTime = (#Data.Path > 0) and Data.Path[#Data.Path].Time or (#Data.Path * (1/60))
                 UpdateInfoUI() 
                 SendNotif("📂 LOAD", "JSON TER-LOAD! Total Rute: " .. #Data.Path) 
             end
@@ -304,7 +331,7 @@ if UI and UI.BtnRecord then
         if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
         local s = "local Route = {\n"
         for _,v in ipairs(Data.Path) do 
-            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, %.2f},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Speed or 16) 
+            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, %.2f, %.2f},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Speed or 16, v.Time or 0) 
         end
         s = s.."}\nreturn Route"
         if writefile then writefile(ConfigFolder.."/NOXVA_Script_Export.lua", s); SendNotif("✅ EXPORT", "Script berhasil di-export murni!")
@@ -312,4 +339,4 @@ if UI and UI.BtnRecord then
     end)
 end
 
-_G.NoxvaWalkAPI = { StopRecord = StopRecording, StartRecord = StartRecording, Play = PlayRecord }
+_G.NoxvaWalkAPI = { StopRecord = StopRecording, StartRecord = StartRecording, Play = PlayRecord, Rewind = RewindRecord }
