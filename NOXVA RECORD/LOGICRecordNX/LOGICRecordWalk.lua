@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX JUMP & OVERHSOOT)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX JUMP & PHYSICS)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -10,14 +10,15 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
 -- BRANKAS DATA GLOBAL
-_G.NoxvaWalkData = _G.NoxvaWalkData or {}
-_G.NoxvaWalkData.Path = _G.NoxvaWalkData.Path or {}
-_G.NoxvaWalkData.Conns = _G.NoxvaWalkData.Conns or {}
-_G.NoxvaWalkData.IsRecording = _G.NoxvaWalkData.IsRecording or false
-_G.NoxvaWalkData.IsPlaying = _G.NoxvaWalkData.IsPlaying or false
-_G.NoxvaWalkData.CurrentNode = _G.NoxvaWalkData.CurrentNode or 1
-_G.NoxvaWalkData.TotalRecordTime = _G.NoxvaWalkData.TotalRecordTime or 0
-
+_G.NoxvaWalkData = _G.NoxvaWalkData or {
+    Path = {},
+    IsRecording = false,
+    IsPlaying = false,
+    CurrentNode = 1,
+    EditIndex = 0,
+    TotalRecordTime = 0,
+    Conns = {} 
+}
 local Data = _G.NoxvaWalkData
 
 local ConfigFolder = "NoxvaHub/WalkRecords/" .. tostring(game.PlaceId)
@@ -25,12 +26,14 @@ if makefolder then pcall(function() makefolder("NoxvaHub") makefolder("NoxvaHub/
 
 local lastJumpTime = 0
 local stuckTimer = 0
-local lastUITick = 0 
 
 local function SendNotif(title, text)
     game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 3})
 end
 
+-- ==========================================
+-- UI UPDATER
+-- ==========================================
 local function UpdateInfoUI()
     if UI and UI.InfoLabel then
         local mins = math.floor(Data.TotalRecordTime / 60)
@@ -40,67 +43,7 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REAL-TIME SPEED ENFORCER
--- ==========================================
-if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
-Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
-    if Data.IsPlaying then return end 
-    
-    local char = player.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if not hum then return end
-
-    local tool = char:FindFirstChildOfClass("Tool")
-    local toolName = tool and tool.Name or "None"
-
-    local targetWS = Data.CoilSettings.NormalWS
-    local targetJP = Data.CoilSettings.NormalJP
-
-    if toolName == Data.CoilSettings.Coil1Name then
-        targetWS = Data.CoilSettings.Coil1WS
-        targetJP = Data.CoilSettings.Coil1JP
-    elseif toolName == Data.CoilSettings.Coil2Name then
-        targetWS = Data.CoilSettings.Coil2WS
-        targetJP = Data.CoilSettings.Coil2JP
-    end
-
-    if targetWS > 0 then 
-        hum.WalkSpeed = targetWS 
-    else
-        hum.WalkSpeed = 16
-    end
-    
-    if targetJP > 0 then 
-        hum.UseJumpPower = true 
-        hum.JumpPower = targetJP 
-    else
-        hum.UseJumpPower = true
-        hum.JumpPower = 50 
-    end
-end)
-
--- ==========================================
--- DETEKSI TOOL (COIL) SAAT RECORD
--- ==========================================
-local function GetEquippedTool()
-    local char = player.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then return tool.Name end
-    end
-    return "None"
-end
-
-local function AddNode(pos, isJump)
-    table.insert(Data.Path, {
-        Position = pos, 
-        IsJumpPoint = isJump,
-        Tool = GetEquippedTool()
-    })
-end
-
--- ==========================================
--- 1. FUNGSI RECORDING (NORMAL)
+-- 1. FUNGSI RECORDING
 -- ==========================================
 local function StopRecording()
     Data.IsRecording = false
@@ -117,16 +60,17 @@ local function StartRecording(isResume)
     hrp.Anchored = false 
     
     if not isResume then 
-        Data.Path = {}
+        table.clear(Data.Path)
         Data.TotalRecordTime = 0
         UpdateInfoUI()
-        SendNotif("🔴 RECORD", "Mulai merekam jejak!") 
+        SendNotif("🔴 RECORD", "Recording Dimulai!") 
     else 
         SendNotif("🔴 RECORD", "Resume Recording Aktif!") 
     end
     
     Data.IsRecording = true
     local lastPos = hrp.Position
+    
     StopRecording()
     Data.IsRecording = true 
     
@@ -134,12 +78,14 @@ local function StartRecording(isResume)
         if Data.IsRecording then StopRecording(); SendNotif("⏸️ RECORD", "Mati! Recording Pause.") end
     end)
     
+    -- FIX V6 ANTI DOUBLE JUMP SAAT RECORDING: Cuma catat lompat pas lagi di darat
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
         local state = humanoid:GetState()
         local isGrounded = (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics or state == Enum.HumanoidStateType.Landed)
+        
         if Data.IsRecording and isGrounded and (tick() - lastJumpTime) > 0.5 then 
             lastJumpTime = tick()
-            AddNode(hrp.Position, true)
+            table.insert(Data.Path, {Position = hrp.Position, IsJumpPoint = true})
             lastPos = hrp.Position
             UpdateInfoUI()
         end
@@ -147,7 +93,7 @@ local function StartRecording(isResume)
     
     Data.Conns.State = humanoid.StateChanged:Connect(function(oldState, newState)
         if Data.IsRecording and newState == Enum.HumanoidStateType.Landed then
-            AddNode(hrp.Position, false)
+            table.insert(Data.Path, {Position = hrp.Position, IsJumpPoint = false})
             lastPos = hrp.Position
             UpdateInfoUI()
         end
@@ -156,24 +102,21 @@ local function StartRecording(isResume)
     Data.Conns.Rec = RunService.Stepped:Connect(function(time, dt)
         if not Data.IsRecording then return end
         Data.TotalRecordTime = Data.TotalRecordTime + dt
-        
-        if tick() - lastUITick > 1 then
-            lastUITick = tick()
-            UpdateInfoUI()
-        end
+        UpdateInfoUI()
         
         local state = humanoid:GetState()
         local distLimit = (state == Enum.HumanoidStateType.Climbing) and 1.2 or 3.5
         
         if (hrp.Position - lastPos).Magnitude > distLimit then
-            AddNode(hrp.Position, false)
+            table.insert(Data.Path, {Position = hrp.Position, IsJumpPoint = false})
             lastPos = hrp.Position
+            UpdateInfoUI()
         end
     end)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (FIX MELENCENG & FIX LOMPAT AYAN!)
+-- 2. ABSOLUTE SPEED ENGINE (FIX JUMP PHYSICS)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -218,65 +161,51 @@ local function PlayRecord()
         end
 
         local step = Data.Path[Data.CurrentNode]
-        
-        local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or 16
-        local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or 50
-        
-        if step.Tool == Data.CoilSettings.Coil1Name then
-            targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or targetWS
-            targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or targetJP
-        elseif step.Tool == Data.CoilSettings.Coil2Name then
-            targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or targetWS
-            targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or targetJP
-        end
-        
-        humanoid.WalkSpeed = targetWS
-        humanoid.UseJumpPower = true
-        humanoid.JumpPower = targetJP
-
         local targetPos = step.Position
         local myPos = hrp.Position
         
         local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
         local dist2D = walkDir.Magnitude
-        local dir = (dist2D > 0.05) and walkDir.Unit or Vector3.zero
+        local dir = (dist2D > 0.1) and walkDir.Unit or Vector3.zero
         
         local state = humanoid:GetState()
         local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
         local yDiff = targetPos.Y - myPos.Y
+        local currentSpeed = humanoid.WalkSpeed
 
         if dir ~= Vector3.zero then
             humanoid:Move(dir, false)
-            
-            if not isMidAir then
-                -- FIX LOMPAT AYAN: Hapus ChangeState(Jumping) disini! Murni dorong Y naik dikit doang kalo nanjak.
-                local targetVelY = hrp.Velocity.Y
+            local targetVelY = hrp.Velocity.Y
+
+            if isMidAir then
+                -- Biarkan gravitasi kerja untuk Y, tapi dorong terus X dan Z biar nyampe tujuannya!
+                hrp.Velocity = Vector3.new(dir.X * currentSpeed, targetVelY, dir.Z * currentSpeed)
+            else
                 if yDiff > 1.2 then
+                    -- Nanjak otomatis kalau bukan titik lompat
+                    if not isMidAir then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
                     targetVelY = math.max(targetVelY, 15) 
                 elseif yDiff < -5 and dist2D < 4 then
                     targetVelY = -60 
                 end
-                hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
-            else
-                -- Kalo lagi di udara, cuma ngatur X dan Z, biarin gravitasi ngatur Y
-                hrp.Velocity = Vector3.new(dir.X * targetWS, hrp.Velocity.Y, dir.Z * targetWS)
+                hrp.Velocity = Vector3.new(dir.X * currentSpeed, targetVelY, dir.Z * currentSpeed)
             end
             
-            -- Biar menghadap rute
             if dist2D > 0.5 then 
                 local freshPos = hrp.Position
                 hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
             end
         end
 
-        -- FIX BABLAS/MELENCENG: Tolerance dibikin melebar menyesuaikan kecepatan speed lu.
-        local tolerance = math.max(2.5, targetWS * 0.05)
+        local tolerance = (step.IsJumpPoint) and 2.5 or 2.0
         
-        -- MURNI LOMPAT DARI REKAMAN LU AJA!
-        if step.IsJumpPoint and dist2D < (tolerance + 1.5) then 
-            if not isMidAir and (tick() - lastJumpTime > 0.3) then
+        -- FIX V6 ANTI DOUBLE JUMP + MOMENTUM BOOST
+        if step.IsJumpPoint and dist2D < (tolerance + 1.0) then 
+            if not isMidAir and (tick() - lastJumpTime > 0.5) then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 lastJumpTime = tick()
+                -- Boost dorongan ke depan pas baru lepas landas biar lompatannya pasti nyampe
+                hrp.Velocity = Vector3.new(dir.X * (currentSpeed * 1.2), hrp.Velocity.Y, dir.Z * (currentSpeed * 1.2))
             end
         end
 
@@ -285,6 +214,7 @@ local function PlayRecord()
             stuckTimer = 0
         end
 
+        -- FIX V6 STUCK HANDLER: Jangan narik/teleport bot kalau lagi melayang jatuh di udara!
         stuckTimer = stuckTimer + dt
         if stuckTimer > 1.5 then 
             if not isMidAir then 
@@ -299,7 +229,7 @@ end
 -- ==========================================
 -- 3. BINDING TOMBOL KE LOGIC
 -- ==========================================
-if UI and UI.BtnRecord then
+if UI then
     UI.BtnRecord.MouseButton1Click:Connect(function()
         if not Data.IsRecording then StartRecording(false); UI.BtnRecord.Text = "⏹ STOP REC" else StopRecording(); UI.BtnRecord.Text = "⏺ RECORD"; SendNotif("✅ SELESAI", "Record dihentikan!") end
     end)
@@ -314,13 +244,7 @@ if UI and UI.BtnRecord then
     UI.BtnSave.MouseButton1Click:Connect(function() 
         if writefile then 
             local savablePath = {}
-            for _, step in ipairs(Data.Path) do 
-                table.insert(savablePath, {
-                    x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
-                    IsJumpPoint = step.IsJumpPoint,
-                    Tool = step.Tool
-                }) 
-            end
+            for _, step in ipairs(Data.Path) do table.insert(savablePath, {x = step.Position.X, y = step.Position.Y, z = step.Position.Z, IsJumpPoint = step.IsJumpPoint}) end
             writefile(ConfigFolder.."/NOXVA_Route.json", HttpService:JSONEncode(savablePath)) 
             SendNotif("💾 SAVE", "JSON TERSIMPAN di folder executor!") 
         end 
@@ -331,13 +255,7 @@ if UI and UI.BtnRecord then
             local success, decoded = pcall(function() return HttpService:JSONDecode(readfile(ConfigFolder.."/NOXVA_Route.json")) end)
             if success and type(decoded) == "table" then
                 Data.Path = {}
-                for _, step in ipairs(decoded) do 
-                    table.insert(Data.Path, {
-                        Position = Vector3.new(step.x, step.y, step.z), 
-                        IsJumpPoint = step.IsJumpPoint,
-                        Tool = step.Tool or "None"
-                    }) 
-                end
+                for _, step in ipairs(decoded) do table.insert(Data.Path, {Position = Vector3.new(step.x, step.y, step.z), IsJumpPoint = step.IsJumpPoint}) end
                 Data.TotalRecordTime = #Data.Path * (1/60) 
                 UpdateInfoUI() 
                 SendNotif("📂 LOAD", "JSON TER-LOAD! Total Rute: " .. #Data.Path) 
@@ -348,9 +266,7 @@ if UI and UI.BtnRecord then
     UI.BtnExport.MouseButton1Click:Connect(function()
         if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
         local s = "local Route = {\n"
-        for _,v in ipairs(Data.Path) do 
-            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, \"%s\"},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Tool or "None") 
-        end
+        for _,v in ipairs(Data.Path) do s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint)) end
         s = s.."}\nreturn Route"
         if writefile then writefile(ConfigFolder.."/NOXVA_Script_Export.lua", s); SendNotif("✅ EXPORT", "Script berhasil di-export murni!")
         else SendNotif("❌ ERROR", "Executor lu gak support writefile!") end
