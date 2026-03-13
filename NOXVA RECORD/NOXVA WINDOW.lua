@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB - PURE WINDOW WALK RECORD (SYNCED V6)
+-- NOXVA HUB - PURE WINDOW WALK RECORD (SYNCED V6 + COIL SCANNER)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 
@@ -20,9 +20,14 @@ if not NoxvaUI then
 end
 
 -- ==========================================
--- GLOBAL EXPORT (Buat diakses file logic lu)
+-- GLOBAL EXPORT & COIL DATA (Akses untuk Logic)
 -- ==========================================
 _G.NoxvaWalkUI = {}
+_G.NoxvaWalkData = _G.NoxvaWalkData or {}
+_G.NoxvaWalkData.CoilSettings = {
+    Coil1Name = "Speed Coil", Coil1WS = 0, Coil1JP = 0,
+    Coil2Name = "Gravity Coil", Coil2WS = 0, Coil2JP = 0
+}
 
 -- ==========================================
 -- FUNGSI DRAGGABLE UI
@@ -148,17 +153,9 @@ end
 -- 1. WIDGET TIMELINE
 -- ==========================================
 local W_Timeline = CreateWidget("W_Timeline", UDim2.new(0.3, 0, 0.2, 0))
-
--- Tambahan: Label Info Frame buat Editor
 local EditLbl = Instance.new("TextLabel", W_Timeline)
-EditLbl.Size = UDim2.new(0, 75, 0, 28)
-EditLbl.BackgroundTransparency = 1
-EditLbl.Text = "Frame: 0/0"
-EditLbl.TextColor3 = Color3.fromRGB(255, 200, 50)
-EditLbl.Font = Enum.Font.GothamBold
-EditLbl.TextSize = 10
+EditLbl.Size = UDim2.new(0, 75, 0, 28); EditLbl.BackgroundTransparency = 1; EditLbl.Text = "Frame: 0/0"; EditLbl.TextColor3 = Color3.fromRGB(255, 200, 50); EditLbl.Font = Enum.Font.GothamBold; EditLbl.TextSize = 10
 _G.NoxvaWalkUI.EditLabel = EditLbl
-
 _G.NoxvaWalkUI.BtnPrev = C_Btn(W_Timeline, "<<", 35, Color3.fromRGB(50, 50, 50))
 _G.NoxvaWalkUI.BtnNext = C_Btn(W_Timeline, ">>", 35, Color3.fromRGB(50, 50, 50))
 _G.NoxvaWalkUI.BtnDone = C_Btn(W_Timeline, "✂️ POTONG", 65, Color3.fromRGB(180, 40, 40))
@@ -169,22 +166,14 @@ AddCloseBtn(W_Timeline)
 -- 2. WIDGET RECORD & PLAY
 -- ==========================================
 local W_Record = CreateWidget("W_Record", UDim2.new(0.6, 0, 0.2, 0))
-
--- Tambahan: Label Info Total Record
 local InfoLbl = Instance.new("TextLabel", W_Record)
-InfoLbl.Size = UDim2.new(0, 110, 0, 28)
-InfoLbl.BackgroundTransparency = 1
-InfoLbl.Text = "Total: 0 | 00:00"
-InfoLbl.TextColor3 = Color3.fromRGB(150, 200, 255)
-InfoLbl.Font = Enum.Font.GothamBold
-InfoLbl.TextSize = 10
+InfoLbl.Size = UDim2.new(0, 110, 0, 28); InfoLbl.BackgroundTransparency = 1; InfoLbl.Text = "Total: 0 | 00:00"; InfoLbl.TextColor3 = Color3.fromRGB(150, 200, 255); InfoLbl.Font = Enum.Font.GothamBold; InfoLbl.TextSize = 10
 _G.NoxvaWalkUI.InfoLabel = InfoLbl
-
 _G.NoxvaWalkUI.BtnRecord = C_Btn(W_Record, "⏺ RECORD", 65, Color3.fromRGB(200, 50, 50))
 _G.NoxvaWalkUI.BtnPlay   = C_Btn(W_Record, "▶ PLAY", 50, Color3.fromRGB(40, 200, 90))
 _G.NoxvaWalkUI.BtnSave   = C_Btn(W_Record, "💾 SAVE", 55, Color3.fromRGB(60, 60, 150))
 _G.NoxvaWalkUI.BtnLoad   = C_Btn(W_Record, "📂 LOAD", 55, Color3.fromRGB(60, 120, 150))
-_G.NoxvaWalkUI.BtnExport = C_Btn(W_Record, "📋 EXPORT", 65, Color3.fromRGB(150, 60, 150)) -- NEW: Tombol Export V6
+_G.NoxvaWalkUI.BtnExport = C_Btn(W_Record, "📋 EXPORT", 65, Color3.fromRGB(150, 60, 150))
 AddCloseBtn(W_Record)
 
 -- ==========================================
@@ -197,10 +186,24 @@ _G.NoxvaWalkUI.BtnStop  = C_Btn(W_Control, "⏹ STOP", 50, Color3.fromRGB(40, 40
 AddCloseBtn(W_Control)
 
 -- ==========================================
--- TAB UI UTAMA (PEMANGGIL WIDGET)
+-- TAB UI UTAMA (PEMANGGIL WIDGET & SETTING COIL)
 -- ==========================================
 local WalkTab = Window:MakeTab("🏃 Walk Record")
 
 WalkTab:AddSection("WIDGET MANAGER")
 WalkTab:AddDoubleButton("Tampilkan Timeline", function() W_Timeline.Visible = true end, "Tampilkan Record", function() W_Record.Visible = true end)
 WalkTab:AddButton("Tampilkan Control Panel", function() W_Control.Visible = true end)
+
+-- FITUR BARU: SETTING COIL & SPEED SCANNER
+WalkTab:AddSection("⚡ SCANNER & SETTING COIL")
+WalkTab:AddLabel("Sistem akan otomatis scan speed kamu saat Record. Tapi kamu bisa menimpa (override) kecepatannya secara paksa di bawah ini. Isi 0 jika ingin menggunakan auto-scan bawaan game.")
+
+WalkTab:AddTextbox("Nama Item Coil 1 (Wajib Sama)", "Speed Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil1Name = v end)
+WalkTab:AddTextbox("Override Coil 1 - WalkSpeed", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil1WS = tonumber(v) or 0 end)
+WalkTab:AddTextbox("Override Coil 1 - JumpPower", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil1JP = tonumber(v) or 0 end)
+
+WalkTab:AddTextbox("Nama Item Coil 2 (Wajib Sama)", "Gravity Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil2Name = v end)
+WalkTab:AddTextbox("Override Coil 2 - WalkSpeed", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil2WS = tonumber(v) or 0 end)
+WalkTab:AddTextbox("Override Coil 2 - JumpPower", "", function(v) _G.NoxvaWalkData.CoilSettings.Coil2JP = tonumber(v) or 0 end)
+
+Window:MakeConfigTab()
