@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V13 FINAL - SMART SPEED COIL OVERRIDE)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V14 FINAL - LOOK-AHEAD SMOOTHING)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -108,7 +108,8 @@ local function StartRecording(isResume)
             UpdateInfoUI()
         end
         
-        local recordGap = math.max(3.5, humanoid.WalkSpeed * 0.08)
+        -- Gap dinaikin dikit buat ngurangin node spam
+        local recordGap = math.max(3.5, humanoid.WalkSpeed * 0.1)
         if (hrp.Position - lastPos).Magnitude > recordGap then
             AddNode(hrp.Position, false, humanoid.WalkSpeed)
             lastPos = hrp.Position
@@ -160,24 +161,67 @@ local function PlayRecord()
 
         local step = Data.Path[Data.CurrentNode]
         
-        -- LOGIC BARU: Smart Speed Override
-        -- Cuma paksa naik speed kalo speed dari rekaman beneran > 16 dan lebih cepet dari speed sekarang.
-        -- Jadi kalau player pake Speed Coil (WalkSpeed = 32), gak bakal diturunin paksa ke 16.
         if step.Speed and step.Speed > 16 and humanoid.WalkSpeed < step.Speed then 
             humanoid.WalkSpeed = step.Speed 
         end
         
         local currentWS = humanoid.WalkSpeed
-        local targetPos = step.Position
         local myPos = hrp.Position
         
-        local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
-        local dist2D = walkDir.Magnitude
-        local dir = (dist2D > 0.05) and walkDir.Unit or Vector3.zero
+        -- 1. CEK JARAK KE NODE SAAT INI
+        local distToCurrent = (Data.Path[Data.CurrentNode].Position - myPos).Magnitude
+        local tolerance = math.max(4.0, currentWS * 0.1)
         
-        local yDiff = targetPos.Y - myPos.Y
-        if yDiff < -20 or dist2D > 40 then
-            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 3, 0))
+        local state = humanoid:GetState()
+        local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
+        
+        if isMidAir then 
+            tolerance = tolerance * 1.5 
+        end
+
+        -- 2. OVERSHOOT & TOLERANCE HANDLER (Majuin Node)
+        -- Kalau kita udah deket node, atau terlanjur kelewatan (node selanjutnya lebih deket), majuin!
+        while Data.CurrentNode < #Data.Path do
+            local currentDist = (Data.Path[Data.CurrentNode].Position - myPos).Magnitude
+            local nextDist = (Data.Path[Data.CurrentNode + 1].Position - myPos).Magnitude
+            
+            if currentDist < tolerance then
+                Data.CurrentNode = Data.CurrentNode + 1
+                stuckTimer = 0
+            elseif nextDist < currentDist and currentDist < (tolerance * 2.5) then
+                Data.CurrentNode = Data.CurrentNode + 1
+                stuckTimer = 0
+            else
+                break
+            end
+        end
+        
+        if Data.CurrentNode > #Data.Path then return end
+        
+        -- 3. LOOK-AHEAD TARGET (CARROT ON A STICK)
+        -- Cari node di depan buat dibidik arahnya biar gak getar
+        local lookAheadDist = math.max(6.0, currentWS * 0.25)
+        local targetIndex = Data.CurrentNode
+        
+        for i = Data.CurrentNode, #Data.Path do
+            local d = (Data.Path[i].Position - myPos).Magnitude
+            if d >= lookAheadDist then
+                targetIndex = i
+                break
+            end
+            targetIndex = i
+        end
+        
+        local steerStep = Data.Path[targetIndex]
+        local targetPos = steerStep.Position
+        
+        local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
+        local dir = (walkDir.Magnitude > 0.05) and walkDir.Unit or Vector3.zero
+        
+        -- ANTI BUTA RUTE JATUH
+        local yDiff = Data.Path[Data.CurrentNode].Position.Y - myPos.Y
+        if yDiff < -20 or distToCurrent > 40 then
+            hrp.CFrame = CFrame.new(Data.Path[Data.CurrentNode].Position + Vector3.new(0, 3, 0))
             hrp.Velocity = Vector3.zero
             stuckTimer = 0
             return
@@ -187,30 +231,18 @@ local function PlayRecord()
             humanoid:Move(dir, false)
         end
 
-        local tolerance = math.max(4.0, currentWS * 0.15)
-        local state = humanoid:GetState()
-        local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
-        
-        if isMidAir then 
-            tolerance = tolerance * 1.5 
-        end
-
-        if step.IsJumpPoint and dist2D < (tolerance + 3.0) then 
+        -- 4. TRIGGER LOMPAT DARI NODE ASLI
+        if Data.Path[Data.CurrentNode].IsJumpPoint and distToCurrent < (tolerance + 3.0) then 
             if (tick() - lastJumpTime > 0.25) then
                 humanoid.Jump = true 
                 lastJumpTime = tick()
             end
         end
 
-        if dist2D < tolerance then
-            Data.CurrentNode = Data.CurrentNode + 1
-            stuckTimer = 0
-        end
-
         stuckTimer = stuckTimer + dt
         if stuckTimer > 2.5 then 
             if not isMidAir then 
-                hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
+                hrp.CFrame = CFrame.new(Data.Path[Data.CurrentNode].Position + Vector3.new(0, 2, 0))
                 hrp.Velocity = Vector3.zero
             end
             Data.CurrentNode = Data.CurrentNode + 1
