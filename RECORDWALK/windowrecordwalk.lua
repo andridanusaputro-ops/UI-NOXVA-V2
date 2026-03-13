@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | RECORD WALK - PURE WINDOW (NO LOGIC)
+-- NOXVA HUB | RECORD WALK - 100% CLONE WINDOW (MINIMIZE & CLOSE)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 
@@ -18,11 +18,11 @@ local ScreenGui = Instance.new("ScreenGui", targetParent)
 ScreenGui.Name = "Noxva_StudioWalk_Clone"
 ScreenGui.ResetOnSpawn = false
 
--- GLOBAL EXPORT (CUMA BUAT NAMPUNG TOMBOL, GAK ADA LOGIC)
+-- GLOBAL EXPORT
 _G.NoxvaWalkUI = _G.NoxvaWalkUI or {}
 
 -- ==========================================
--- FUNGSI DRAGGABLE MURNI
+-- FUNGSI DRAGGABLE
 -- ==========================================
 local function MakeDraggable(Frame, DragArea)
     local dragToggle, dragInput, dragStart, startPos
@@ -140,11 +140,30 @@ local function CreateRow(Parent)
 end
 
 -- ==========================================
--- FLOATING TOGGLE MENU (Ikon di atas layar)
+-- LOGO SCRIPT (MINIMIZED STATE)
+-- ==========================================
+local LogoMenu = Instance.new("TextButton", ScreenGui)
+LogoMenu.Size = UDim2.new(0, 45, 0, 45)
+LogoMenu.Position = UDim2.new(0.5, -22, 0, 10)
+LogoMenu.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+LogoMenu.BackgroundTransparency = 0.2
+LogoMenu.Text = "N"
+LogoMenu.TextColor3 = Color3.fromRGB(150, 255, 100)
+LogoMenu.Font = Enum.Font.GothamBlack
+LogoMenu.TextSize = 24
+LogoMenu.Visible = false
+Instance.new("UICorner", LogoMenu).CornerRadius = UDim.new(1, 0) -- Bikin bulat
+local LogoStroke = Instance.new("UIStroke", LogoMenu)
+LogoStroke.Color = Color3.fromRGB(150, 255, 100)
+LogoStroke.Thickness = 1.5
+MakeDraggable(LogoMenu)
+
+-- ==========================================
+-- FLOATING TOGGLE MENU (MENU PATEN TENGAH)
 -- ==========================================
 local TopMenu = Instance.new("Frame", ScreenGui)
-TopMenu.Size = UDim2.new(0, 150, 0, 35)
-TopMenu.Position = UDim2.new(0.5, -75, 0, 10) 
+TopMenu.Size = UDim2.new(0, 220, 0, 35)
+TopMenu.Position = UDim2.new(0.5, -110, 0, 10) 
 TopMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 TopMenu.BackgroundTransparency = 0.2
 Instance.new("UICorner", TopMenu).CornerRadius = UDim.new(0, 8)
@@ -155,7 +174,7 @@ local MenuLayout = Instance.new("UIListLayout", TopMenu)
 MenuLayout.FillDirection = Enum.FillDirection.Horizontal
 MenuLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 MenuLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-MenuLayout.Padding = UDim.new(0, 10)
+MenuLayout.Padding = UDim.new(0, 6)
 
 -- ==========================================
 -- 1. PANEL VIP (KIRI)
@@ -221,16 +240,59 @@ _G.NoxvaWalkUI.BtnSave = C_Btn(RowF1, "💾 SAVE", 70, Color3.fromRGB(40, 180, 8
 _G.NoxvaWalkUI.BtnLoad = C_Btn(RowF1, "📂 LOAD", 70, Color3.fromRGB(180, 120, 30))
 
 -- ==========================================
--- LOGIC TOGGLE MENU ATAS (Hanya buka tutup UI)
+-- LOGIC TOMBOL MENU PATEN (TENGAH ATAS)
 -- ==========================================
-local BtnToggleVIP = C_Btn(TopMenu, "👑 VIP", 40, Color3.fromRGB(40, 40, 40))
+local BtnToggleVIP = C_Btn(TopMenu, "👑 VIP", 45, Color3.fromRGB(40, 40, 40))
 BtnToggleVIP.MouseButton1Click:Connect(function() P_VIP.Visible = not P_VIP.Visible end)
 
-local BtnToggleCtrl = C_Btn(TopMenu, "🎮 CTRL", 45, Color3.fromRGB(40, 40, 40))
+local BtnToggleCtrl = C_Btn(TopMenu, "🎮 CTRL", 50, Color3.fromRGB(40, 40, 40))
 BtnToggleCtrl.MouseButton1Click:Connect(function() P_Ctrl.Visible = not P_Ctrl.Visible end)
 
-local BtnToggleFile = C_Btn(TopMenu, "📁 FILE", 45, Color3.fromRGB(40, 40, 40))
+local BtnToggleFile = C_Btn(TopMenu, "📁 FILE", 50, Color3.fromRGB(40, 40, 40))
 BtnToggleFile.MouseButton1Click:Connect(function() P_File.Visible = not P_File.Visible end)
+
+local BtnMinimize = C_Btn(TopMenu, "-", 25, Color3.fromRGB(60, 60, 60))
+local BtnCloseUI = C_Btn(TopMenu, "X", 25, Color3.fromRGB(180, 40, 40))
+
+-- State untuk nyimpen tab mana aja yang lagi kebuka sblm di minimize
+local OpenStates = {VIP = true, Ctrl = true, File = false}
+
+BtnMinimize.MouseButton1Click:Connect(function()
+    -- Simpan state tab yang lagi kebuka
+    OpenStates.VIP = P_VIP.Visible
+    OpenStates.Ctrl = P_Ctrl.Visible
+    OpenStates.File = P_File.Visible
+    
+    -- Sembunyikan semua
+    P_VIP.Visible = false
+    P_Ctrl.Visible = false
+    P_File.Visible = false
+    TopMenu.Visible = false
+    
+    -- Munculin Logo
+    LogoMenu.Visible = true
+end)
+
+LogoMenu.MouseButton1Click:Connect(function()
+    -- Sembunyikan Logo
+    LogoMenu.Visible = false
+    
+    -- Munculin Menu Utama & Tab yang tadi kebuka
+    TopMenu.Visible = true
+    P_VIP.Visible = OpenStates.VIP
+    P_Ctrl.Visible = OpenStates.Ctrl
+    P_File.Visible = OpenStates.File
+end)
+
+BtnCloseUI.MouseButton1Click:Connect(function()
+    -- Pengaman biar logic bot mati total kalo di-close
+    if _G.NoxvaWalkData then
+        _G.NoxvaWalkData.IsRecording = false
+        _G.NoxvaWalkData.IsPlaying = false
+    end
+    -- Hancurkan UI
+    ScreenGui:Destroy()
+end)
 
 P_VIP.Visible = true
 P_Ctrl.Visible = true
