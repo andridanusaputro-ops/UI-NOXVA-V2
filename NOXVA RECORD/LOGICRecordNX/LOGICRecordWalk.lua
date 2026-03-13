@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V12 FINAL - ULTRA SMOOTH & MOMENTUM PREDICTION)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V13 FINAL - SMART SPEED COIL OVERRIDE)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -108,7 +108,6 @@ local function StartRecording(isResume)
             UpdateInfoUI()
         end
         
-        -- LOGIC BARU: Gap rekam diperlebar biar rute gak terlalu padat (menghindari stutter)
         local recordGap = math.max(3.5, humanoid.WalkSpeed * 0.08)
         if (hrp.Position - lastPos).Magnitude > recordGap then
             AddNode(hrp.Position, false, humanoid.WalkSpeed)
@@ -160,7 +159,13 @@ local function PlayRecord()
         end
 
         local step = Data.Path[Data.CurrentNode]
-        if step.Speed then humanoid.WalkSpeed = step.Speed end
+        
+        -- LOGIC BARU: Smart Speed Override
+        -- Cuma paksa naik speed kalo speed dari rekaman beneran > 16 dan lebih cepet dari speed sekarang.
+        -- Jadi kalau player pake Speed Coil (WalkSpeed = 32), gak bakal diturunin paksa ke 16.
+        if step.Speed and step.Speed > 16 and humanoid.WalkSpeed < step.Speed then 
+            humanoid.WalkSpeed = step.Speed 
+        end
         
         local currentWS = humanoid.WalkSpeed
         local targetPos = step.Position
@@ -182,7 +187,6 @@ local function PlayRecord()
             humanoid:Move(dir, false)
         end
 
-        -- LOGIC BARU: Toleransi dinaikin drastis biar cornering mulus & ngurangin ngerem mendadak
         local tolerance = math.max(4.0, currentWS * 0.15)
         local state = humanoid:GetState()
         local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
@@ -191,10 +195,9 @@ local function PlayRecord()
             tolerance = tolerance * 1.5 
         end
 
-        -- LOGIC BARU: Antisipasi lompat lebih awal sebelum nyampe titik persisnya
         if step.IsJumpPoint and dist2D < (tolerance + 3.0) then 
             if (tick() - lastJumpTime > 0.25) then
-                humanoid.Jump = true -- Cukup pakai native jump biar momentum lari gak putus
+                humanoid.Jump = true 
                 lastJumpTime = tick()
             end
         end
@@ -204,7 +207,6 @@ local function PlayRecord()
             stuckTimer = 0
         end
 
-        -- LOGIC BARU: Delay stuck teleport dinaikin biar gak ngerusak visual kalau cuma nyangkut dikit
         stuckTimer = stuckTimer + dt
         if stuckTimer > 2.5 then 
             if not isMidAir then 
