@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE + COIL SCANNER)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX LAG & AUTO-SCAN)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -17,11 +17,7 @@ _G.NoxvaWalkData = _G.NoxvaWalkData or {
     CurrentNode = 1,
     EditIndex = 0,
     TotalRecordTime = 0,
-    Conns = {},
-    CoilSettings = {
-        Coil1Name = "Speed Coil", Coil1WS = 0, Coil1JP = 0,
-        Coil2Name = "Gravity Coil", Coil2WS = 0, Coil2JP = 0
-    }
+    Conns = {} 
 }
 local Data = _G.NoxvaWalkData
 
@@ -30,11 +26,15 @@ if makefolder then pcall(function() makefolder("NoxvaHub") makefolder("NoxvaHub/
 
 local lastJumpTime = 0
 local stuckTimer = 0
+local lastUITick = 0 -- Anti Lag UI Updater
 
 local function SendNotif(title, text)
     game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 3})
 end
 
+-- ==========================================
+-- ANTI LAG UI UPDATER
+-- ==========================================
 local function UpdateInfoUI()
     if UI and UI.InfoLabel then
         local mins = math.floor(Data.TotalRecordTime / 60)
@@ -43,37 +43,13 @@ local function UpdateInfoUI()
     end
 end
 
--- ==========================================
--- COIL SCANNER LOGIC
--- ==========================================
-local function GetCurrentSpeedAndJump(humanoid)
-    local curWS = humanoid.WalkSpeed
-    local curJP = humanoid.JumpPower
-    
-    local char = player.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool then
-            -- Override jika tool cocok dengan nama di UI dan setting diisi angka > 0
-            if tool.Name == Data.CoilSettings.Coil1Name then
-                if Data.CoilSettings.Coil1WS > 0 then curWS = Data.CoilSettings.Coil1WS end
-                if Data.CoilSettings.Coil1JP > 0 then curJP = Data.CoilSettings.Coil1JP end
-            elseif tool.Name == Data.CoilSettings.Coil2Name then
-                if Data.CoilSettings.Coil2WS > 0 then curWS = Data.CoilSettings.Coil2WS end
-                if Data.CoilSettings.Coil2JP > 0 then curJP = Data.CoilSettings.Coil2JP end
-            end
-        end
-    end
-    return curWS, curJP
-end
-
+-- NATURAL AUTO SCANNER: Murni nyalin Speed & Jump karakter saat itu juga!
 local function AddNode(pos, isJump, humanoid)
-    local ws, jp = GetCurrentSpeedAndJump(humanoid)
     table.insert(Data.Path, {
         Position = pos, 
         IsJumpPoint = isJump,
-        WS = ws, -- Simpan Kecepatan!
-        JP = jp  -- Simpan Lompatan!
+        WS = humanoid.WalkSpeed, -- ⚡ OTO-DETECT SPEED APAPUN (Coil/UI Cheat)
+        JP = humanoid.JumpPower  -- ⚡ OTO-DETECT JUMP
     })
     UpdateInfoUI()
 end
@@ -99,7 +75,7 @@ local function StartRecording(isResume)
         table.clear(Data.Path)
         Data.TotalRecordTime = 0
         UpdateInfoUI()
-        SendNotif("🔴 RECORD", "Recording Dimulai (Auto-Scan Speed)!") 
+        SendNotif("🔴 RECORD", "Mulai Merekam (Auto-Scan Speed Aktif)!") 
     else 
         SendNotif("🔴 RECORD", "Resume Recording Aktif!") 
     end
@@ -133,7 +109,12 @@ local function StartRecording(isResume)
     Data.Conns.Rec = RunService.Stepped:Connect(function(time, dt)
         if not Data.IsRecording then return end
         Data.TotalRecordTime = Data.TotalRecordTime + dt
-        UpdateInfoUI()
+        
+        -- FIX LAG: Update timer teks di UI cuma tiap 1 detik sekali biar FPS gak drop
+        if tick() - lastUITick > 1 then
+            lastUITick = tick()
+            UpdateInfoUI()
+        end
         
         local state = humanoid:GetState()
         local distLimit = (state == Enum.HumanoidStateType.Climbing) and 1.2 or 3.5
@@ -146,7 +127,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. ABSOLUTE SPEED ENGINE (DYNAMIC COIL ADAPTER)
+-- 2. ABSOLUTE SPEED ENGINE (AUTO ADAPT SPEED)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -192,7 +173,7 @@ local function PlayRecord()
 
         local step = Data.Path[Data.CurrentNode]
         
-        -- DYNAMIC SPEED: Ubah kecepatan bot secara realtime menyesuaikan frame yang diinjek!
+        -- DYNAMIC SPEED: Otomatis nerapin Speed dan Jump yg ke-Scan di frame ini!
         local currentSpeed = step.WS or 16
         humanoid.WalkSpeed = currentSpeed
         humanoid.JumpPower = step.JP or 50
@@ -278,7 +259,7 @@ if UI then
                 table.insert(savablePath, {
                     x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
                     IsJumpPoint = step.IsJumpPoint,
-                    ws = step.WS, jp = step.JP -- Save speed data
+                    ws = step.WS, jp = step.JP -- Simpan speed hasil scan!
                 }) 
             end
             writefile(ConfigFolder.."/NOXVA_Route.json", HttpService:JSONEncode(savablePath)) 
@@ -295,7 +276,7 @@ if UI then
                     table.insert(Data.Path, {
                         Position = Vector3.new(step.x, step.y, step.z), 
                         IsJumpPoint = step.IsJumpPoint,
-                        WS = step.ws or 16, -- Fallback ke 16 klo file JSON lama
+                        WS = step.ws or 16, 
                         JP = step.jp or 50
                     }) 
                 end
