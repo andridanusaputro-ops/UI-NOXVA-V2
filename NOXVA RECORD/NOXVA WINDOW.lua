@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB - PURE WINDOW WALK RECORD (SYNCED V6)
+-- NOXVA HUB - PURE WINDOW WALK RECORD (SYNCED V6 + REALTIME MODIFIER)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 
@@ -20,9 +20,16 @@ if not NoxvaUI then
 end
 
 -- ==========================================
--- GLOBAL EXPORT (Buat diakses file logic lu)
+-- GLOBAL EXPORT & DATA COIL (DIAMBIL DARI INPUT LU)
 -- ==========================================
 _G.NoxvaWalkUI = {}
+_G.NoxvaWalkData = _G.NoxvaWalkData or {}
+-- Default 0 = Ngikutin speed murni game. Kalo lu isi angka, baru dia nimpa (Override).
+_G.NoxvaWalkData.CoilSettings = {
+    NormalWS = 0, NormalJP = 0,
+    Coil1Name = "Speed Coil", Coil1WS = 0, Coil1JP = 0,
+    Coil2Name = "Gravity Coil", Coil2WS = 0, Coil2JP = 0
+}
 
 -- ==========================================
 -- FUNGSI DRAGGABLE UI
@@ -85,9 +92,6 @@ local function AddCloseBtn(Parent)
     b.MouseButton1Click:Connect(function() Parent.Visible = false end)
 end
 
--- ==========================================
--- CUSTOM DROPDOWN UNTUK CP (MURNI UI)
--- ==========================================
 local function CreateCPDropdown(Parent)
     local DropContainer = Instance.new("Frame", Parent)
     DropContainer.Size = UDim2.new(0, 90, 0, 28)
@@ -181,12 +185,44 @@ _G.NoxvaWalkUI.BtnStop  = C_Btn(W_Control, "⏹ STOP", 50, Color3.fromRGB(40, 40
 AddCloseBtn(W_Control)
 
 -- ==========================================
--- TAB UI UTAMA (PEMANGGIL WIDGET)
+-- TAB UI UTAMA
 -- ==========================================
 local WalkTab = Window:MakeTab("🏃 Walk Record")
 
 WalkTab:AddSection("WIDGET MANAGER")
 WalkTab:AddDoubleButton("Tampilkan Timeline", function() W_Timeline.Visible = true end, "Tampilkan Record", function() W_Record.Visible = true end)
 WalkTab:AddButton("Tampilkan Control Panel", function() W_Control.Visible = true end)
+
+-- ==========================================
+-- UI SETTING SPEED COIL (MANUAL OVERRIDE)
+-- ==========================================
+WalkTab:AddSection("🔍 SCANNER MANUAL (CEK KECEPATAN)")
+WalkTab:AddButton("🔍 Scan Kecepatan Saat Ini", function()
+    local char = Players.LocalPlayer.Character
+    if char and char:FindFirstChild("Humanoid") then
+        local hum = char.Humanoid
+        local tool = char:FindFirstChildOfClass("Tool")
+        local toolName = tool and tool.Name or "Tangan Kosong"
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "🔍 HASIL SCAN",
+            Text = "Tool: " .. toolName .. "\nSpeed: " .. tostring(hum.WalkSpeed) .. "\nJump: " .. tostring(hum.JumpPower),
+            Duration = 5
+        })
+    end
+end)
+
+WalkTab:AddSection("⚡ SETTING SPEED (NO COIL)")
+WalkTab:AddTextbox("Normal WalkSpeed (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.NormalWS = tonumber(v) or 0 end)
+WalkTab:AddTextbox("Normal JumpPower (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.NormalJP = tonumber(v) or 0 end)
+
+WalkTab:AddSection("⚡ SETTING SPEED (COIL 1)")
+WalkTab:AddTextbox("Nama Item Coil 1", "Speed Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil1Name = v end)
+WalkTab:AddTextbox("WalkSpeed Coil 1 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil1WS = tonumber(v) or 0 end)
+WalkTab:AddTextbox("JumpPower Coil 1 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil1JP = tonumber(v) or 0 end)
+
+WalkTab:AddSection("⚡ SETTING SPEED (COIL 2)")
+WalkTab:AddTextbox("Nama Item Coil 2", "Gravity Coil", function(v) _G.NoxvaWalkData.CoilSettings.Coil2Name = v end)
+WalkTab:AddTextbox("WalkSpeed Coil 2 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil2WS = tonumber(v) or 0 end)
+WalkTab:AddTextbox("JumpPower Coil 2 (Isi 0 = Asli)", "0", function(v) _G.NoxvaWalkData.CoilSettings.Coil2JP = tonumber(v) or 0 end)
 
 Window:MakeConfigTab()
