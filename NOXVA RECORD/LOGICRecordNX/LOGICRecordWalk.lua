@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE 10.000% FIX REALTIME)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX JUMP & OVERHSOOT)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -9,7 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
--- FIX FATAL BUG: Inisialisasi struktur Data biar gak mati/nil
+-- BRANKAS DATA GLOBAL
 _G.NoxvaWalkData = _G.NoxvaWalkData or {}
 _G.NoxvaWalkData.Path = _G.NoxvaWalkData.Path or {}
 _G.NoxvaWalkData.Conns = _G.NoxvaWalkData.Conns or {}
@@ -40,7 +40,7 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REAL-TIME SPEED ENFORCER (FIX USEJUMPPOWER!)
+-- REAL-TIME SPEED ENFORCER
 -- ==========================================
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
@@ -64,19 +64,18 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
         targetJP = Data.CoilSettings.Coil2JP
     end
 
-    -- Kalo lu ngisi angka > 0, paksa speednya sekarang juga!
     if targetWS > 0 then 
         hum.WalkSpeed = targetWS 
     else
-        hum.WalkSpeed = 16 -- Kembalikan ke normal kalo dilepas
+        hum.WalkSpeed = 16
     end
     
     if targetJP > 0 then 
-        hum.UseJumpPower = true -- INI WAJIB BIAR JUMPPOWER 2000 LU BERFUNGSI!
+        hum.UseJumpPower = true 
         hum.JumpPower = targetJP 
     else
         hum.UseJumpPower = true
-        hum.JumpPower = 50 -- Kembalikan ke normal kalo dilepas
+        hum.JumpPower = 50 
     end
 end)
 
@@ -174,7 +173,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (FIX LOMPAT MELAYANG & SPEED COIL!)
+-- 2. FUNGSI PLAYBACK (FIX MELENCENG & FIX LOMPAT AYAN!)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -220,7 +219,6 @@ local function PlayRecord()
 
         local step = Data.Path[Data.CurrentNode]
         
-        -- ⚡ CEK SETTING UI LU BERDASARKAN TOOL YANG DIREKAM
         local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or 16
         local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or 50
         
@@ -241,40 +239,42 @@ local function PlayRecord()
         
         local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
         local dist2D = walkDir.Magnitude
-        local dir = (dist2D > 0.1) and walkDir.Unit or Vector3.zero
+        local dir = (dist2D > 0.05) and walkDir.Unit or Vector3.zero
         
         local state = humanoid:GetState()
         local isMidAir = (state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall)
         local yDiff = targetPos.Y - myPos.Y
 
         if dir ~= Vector3.zero then
-            -- Murni nyuruh badannya gerak ke arah tujuan
             humanoid:Move(dir, false)
             
             if not isMidAir then
-                -- KALAU DI DARAT
+                -- FIX LOMPAT AYAN: Hapus ChangeState(Jumping) disini! Murni dorong Y naik dikit doang kalo nanjak.
                 local targetVelY = hrp.Velocity.Y
                 if yDiff > 1.2 then
-                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     targetVelY = math.max(targetVelY, 15) 
                 elseif yDiff < -5 and dist2D < 4 then
                     targetVelY = -60 
                 end
                 hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
             else
-                -- KALAU DI UDARA: BIARIN GRAVITASI KERJA (ANTI MELAYANG/TERBANG)
+                -- Kalo lagi di udara, cuma ngatur X dan Z, biarin gravitasi ngatur Y
+                hrp.Velocity = Vector3.new(dir.X * targetWS, hrp.Velocity.Y, dir.Z * targetWS)
             end
             
+            -- Biar menghadap rute
             if dist2D > 0.5 then 
                 local freshPos = hrp.Position
                 hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
             end
         end
 
-        local tolerance = (step.IsJumpPoint) and 2.5 or 2.0
+        -- FIX BABLAS/MELENCENG: Tolerance dibikin melebar menyesuaikan kecepatan speed lu.
+        local tolerance = math.max(2.5, targetWS * 0.05)
         
-        if step.IsJumpPoint and dist2D < (tolerance + 1.0) then 
-            if not isMidAir and (tick() - lastJumpTime > 0.5) then
+        -- MURNI LOMPAT DARI REKAMAN LU AJA!
+        if step.IsJumpPoint and dist2D < (tolerance + 1.5) then 
+            if not isMidAir and (tick() - lastJumpTime > 0.3) then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 lastJumpTime = tick()
             end
