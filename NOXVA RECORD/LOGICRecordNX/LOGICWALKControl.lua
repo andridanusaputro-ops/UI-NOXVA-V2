@@ -17,7 +17,6 @@ end
 -- BINDING TOMBOL KONTROL
 -- ==========================================
 if UI then
-    -- PAUSE
     UI.BtnPause.MouseButton1Click:Connect(function()
         if API and API.StopRecord then 
             API.StopRecord() 
@@ -26,7 +25,6 @@ if UI then
         end
     end)
 
-    -- STOP (Berhentiin Play & Record paksa + un-anchor)
     UI.BtnStop.MouseButton1Click:Connect(function()
         Data.IsPlaying = false
         if API and API.StopRecord then API.StopRecord() end
@@ -34,16 +32,19 @@ if UI then
         
         UI.BtnRecord.Text = "⏺ RECORD"
         UI.BtnPlay.Text = "▶ PLAY"
+        UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90)
         
         local char = Players.LocalPlayer.Character
         if char then
-            if char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false) end
+            if char:FindFirstChild("Humanoid") then 
+                char.Humanoid:Move(Vector3.zero, false) 
+                char.Humanoid.AutoRotate = true -- FIX Rotasi balikin normal
+            end
             if char:FindFirstChild("HumanoidRootPart") then char.HumanoidRootPart.Anchored = false end
         end
         SendNotif("⏹️ STOP", "Semua sistem dimatikan!")
     end)
     
-    -- LOOP
     if UI.BtnLoop then
         UI.BtnLoop.MouseButton1Click:Connect(function()
             Data.IsLooping = not Data.IsLooping
@@ -54,4 +55,3 @@ if UI then
 end
 
 print("Logic Walk Control berhasil dimuat!")
-
