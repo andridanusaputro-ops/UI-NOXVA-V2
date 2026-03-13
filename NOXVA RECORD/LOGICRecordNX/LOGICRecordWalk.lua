@@ -42,10 +42,12 @@ end
 -- ==========================================
 -- 1. FUNGSI RECORDING (MURNI & SENSITIF)
 -- ==========================================
-local function AddNode(pos, isJump)
+-- FIX: Tambahin parameter walkSpeed buat nyimpen speed coil
+local function AddNode(pos, isJump, walkSpeed)
     table.insert(Data.Path, {
         Position = pos, 
-        IsJumpPoint = isJump
+        IsJumpPoint = isJump,
+        Speed = walkSpeed or 16 -- Default 16 kalo kosong
     })
 end
 
@@ -85,7 +87,8 @@ local function StartRecording(isResume)
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
         if Data.IsRecording and (tick() - lastJumpTime) > 0.3 then 
             lastJumpTime = tick()
-            AddNode(hrp.Position, true)
+            -- FIX: Simpen WalkSpeed
+            AddNode(hrp.Position, true, humanoid.WalkSpeed)
             lastPos = hrp.Position
             UpdateInfoUI()
         end
@@ -93,7 +96,8 @@ local function StartRecording(isResume)
     
     Data.Conns.State = humanoid.StateChanged:Connect(function(oldState, newState)
         if Data.IsRecording and newState == Enum.HumanoidStateType.Landed then
-            AddNode(hrp.Position, false)
+            -- FIX: Simpen WalkSpeed
+            AddNode(hrp.Position, false, humanoid.WalkSpeed)
             lastPos = hrp.Position
             UpdateInfoUI()
         end
@@ -109,7 +113,8 @@ local function StartRecording(isResume)
         end
         
         if (hrp.Position - lastPos).Magnitude > 2.5 then
-            AddNode(hrp.Position, false)
+            -- FIX: Simpen WalkSpeed
+            AddNode(hrp.Position, false, humanoid.WalkSpeed)
             lastPos = hrp.Position
         end
     end)
@@ -162,6 +167,11 @@ local function PlayRecord()
         local step = Data.Path[Data.CurrentNode]
         local targetPos = step.Position
         local myPos = hrp.Position
+        
+        -- FIX: Setel WalkSpeed sesuai yang direcord biar ngikutin efek Speed Coil
+        if step.Speed then
+            humanoid.WalkSpeed = step.Speed
+        end
         
         local walkDir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos)
         local dist2D = walkDir.Magnitude
@@ -233,9 +243,11 @@ if UI and UI.BtnRecord then
         if writefile then 
             local savablePath = {}
             for _, step in ipairs(Data.Path) do 
+                -- FIX: Save Speed ke JSON
                 table.insert(savablePath, {
                     x = step.Position.X, y = step.Position.Y, z = step.Position.Z, 
-                    IsJumpPoint = step.IsJumpPoint
+                    IsJumpPoint = step.IsJumpPoint,
+                    Speed = step.Speed or 16
                 }) 
             end
             writefile(ConfigFolder.."/NOXVA_Route.json", HttpService:JSONEncode(savablePath)) 
@@ -249,9 +261,11 @@ if UI and UI.BtnRecord then
             if success and type(decoded) == "table" then
                 Data.Path = {}
                 for _, step in ipairs(decoded) do 
+                    -- FIX: Load Speed dari JSON
                     table.insert(Data.Path, {
                         Position = Vector3.new(step.x, step.y, step.z), 
-                        IsJumpPoint = step.IsJumpPoint
+                        IsJumpPoint = step.IsJumpPoint,
+                        Speed = step.Speed or 16
                     }) 
                 end
                 Data.TotalRecordTime = #Data.Path * (1/60) 
@@ -265,7 +279,8 @@ if UI and UI.BtnRecord then
         if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
         local s = "local Route = {\n"
         for _,v in ipairs(Data.Path) do 
-            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint)) 
+            -- FIX: Export ikutan bawa data Speed
+            s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s, %.2f},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint), v.Speed or 16) 
         end
         s = s.."}\nreturn Route"
         if writefile then writefile(ConfigFolder.."/NOXVA_Script_Export.lua", s); SendNotif("✅ EXPORT", "Script berhasil di-export murni!")
