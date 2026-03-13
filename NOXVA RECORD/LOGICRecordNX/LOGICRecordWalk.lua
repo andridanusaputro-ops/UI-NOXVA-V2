@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -17,7 +17,7 @@ _G.NoxvaWalkData = _G.NoxvaWalkData or {
     CurrentNode = 1,
     EditIndex = 0,
     TotalRecordTime = 0,
-    Conns = {} -- Tempat nyimpen koneksi biar gak bocor (Bug Fix)
+    Conns = {} 
 }
 local Data = _G.NoxvaWalkData
 
@@ -29,6 +29,17 @@ local stuckTimer = 0
 
 local function SendNotif(title, text)
     game:GetService("StarterGui"):SetCore("SendNotification", {Title = title, Text = text, Duration = 3})
+end
+
+-- ==========================================
+-- UI UPDATER (FIX BUG TEXT INFO)
+-- ==========================================
+local function UpdateInfoUI()
+    if UI and UI.InfoLabel then
+        local mins = math.floor(Data.TotalRecordTime / 60)
+        local secs = math.floor(Data.TotalRecordTime % 60)
+        UI.InfoLabel.Text = string.format("Total: %d | %02d:%02d", #Data.Path, mins, secs)
+    end
 end
 
 -- ==========================================
@@ -51,6 +62,7 @@ local function StartRecording(isResume)
     if not isResume then 
         table.clear(Data.Path)
         Data.TotalRecordTime = 0
+        UpdateInfoUI()
         SendNotif("🔴 RECORD", "Recording Dimulai!") 
     else 
         SendNotif("🔴 RECORD", "Resume Recording!") 
@@ -59,7 +71,6 @@ local function StartRecording(isResume)
     Data.IsRecording = true
     local lastPos = hrp.Position
     
-    -- Anti Bug: Bersihin koneksi lama sebelum bikin baru
     StopRecording()
     Data.IsRecording = true 
     
@@ -72,6 +83,7 @@ local function StartRecording(isResume)
             lastJumpTime = tick()
             table.insert(Data.Path, {Position = hrp.Position, IsJumpPoint = true})
             lastPos = hrp.Position
+            UpdateInfoUI()
         end
     end)
     
@@ -79,12 +91,14 @@ local function StartRecording(isResume)
         if Data.IsRecording and newState == Enum.HumanoidStateType.Landed then
             table.insert(Data.Path, {Position = hrp.Position, IsJumpPoint = false})
             lastPos = hrp.Position
+            UpdateInfoUI()
         end
     end)
     
     Data.Conns.Rec = RunService.Stepped:Connect(function(time, dt)
         if not Data.IsRecording then return end
         Data.TotalRecordTime = Data.TotalRecordTime + dt
+        UpdateInfoUI()
         
         local state = humanoid:GetState()
         local distLimit = (state == Enum.HumanoidStateType.Climbing) and 1.2 or 3.5
@@ -92,12 +106,13 @@ local function StartRecording(isResume)
         if (hrp.Position - lastPos).Magnitude > distLimit then
             table.insert(Data.Path, {Position = hrp.Position, IsJumpPoint = false})
             lastPos = hrp.Position
+            UpdateInfoUI()
         end
     end)
 end
 
 -- ==========================================
--- 2. ABSOLUTE SPEED ENGINE (AUTO WALK V6)
+-- 2. ABSOLUTE SPEED ENGINE (FIX STUTTERING)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -121,18 +136,25 @@ local function PlayRecord()
     
     stuckTimer = 0
     Data.IsPlaying = true
+    
+    -- FIX STUTTERING: Matiin rotasi bawaan roblox biar gak berantem sama CFrame kita
+    humanoid.AutoRotate = false 
+
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
     Data.Conns.Play = RunService.Stepped:Connect(function(time, dt)
         if not Data.IsPlaying or humanoid.Health <= 0 then
-            Data.IsPlaying = false; if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
+            Data.IsPlaying = false
+            humanoid.AutoRotate = true -- Nyalain lagi rotasinya
+            if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
         
         if Data.CurrentNode > #Data.Path then
             Data.IsPlaying = false; SendNotif("🏁 SELESAI", "Auto Walk Selesai!")
-            if UI and UI.BtnPlay then UI.BtnPlay.Text = "▶ PLAY" end
+            if UI and UI.BtnPlay then UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90) end
             humanoid:Move(Vector3.zero, false)
             hrp.Velocity = Vector3.zero
+            humanoid.AutoRotate = true -- Nyalain lagi
             if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
 
@@ -195,8 +217,8 @@ if UI then
     UI.BtnPlay.MouseButton1Click:Connect(function()
         if Data.IsRecording then StopRecording(); UI.BtnRecord.Text = "⏺ RECORD" end
         Data.IsPlaying = not Data.IsPlaying
-        if Data.IsPlaying then UI.BtnPlay.Text = "⏹ STOP WALK"; PlayRecord()
-        else UI.BtnPlay.Text = "▶ PLAY"; if Data.Conns.Play then Data.Conns.Play:Disconnect() end; local char = player.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false) end end 
+        if Data.IsPlaying then UI.BtnPlay.Text = "⏹ STOP WALK"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(180, 40, 40); PlayRecord()
+        else UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90); if Data.Conns.Play then Data.Conns.Play:Disconnect() end; local char = player.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false); char.Humanoid.AutoRotate = true end end 
     end)
 
     UI.BtnSave.MouseButton1Click:Connect(function() 
@@ -215,11 +237,20 @@ if UI then
                 Data.Path = {}
                 for _, step in ipairs(decoded) do table.insert(Data.Path, {Position = Vector3.new(step.x, step.y, step.z), IsJumpPoint = step.IsJumpPoint}) end
                 Data.TotalRecordTime = #Data.Path * (1/60) 
+                UpdateInfoUI() 
                 SendNotif("📂 LOAD", "JSON TER-LOAD! Total Rute: " .. #Data.Path) 
             end
         end 
     end)
+    
+    UI.BtnExport.MouseButton1Click:Connect(function()
+        if #Data.Path == 0 then SendNotif("⚠️ EXPORT", "Rute Kosong!") return end
+        local s = "local Route = {\n"
+        for _,v in ipairs(Data.Path) do s = s..string.format("    {Vector3.new(%.2f, %.2f, %.2f), %s},\n", v.Position.X, v.Position.Y, v.Position.Z, tostring(v.IsJumpPoint)) end
+        s = s.."}\nreturn Route"
+        if writefile then writefile(ConfigFolder.."/NOXVA_Script_Export.lua", s); SendNotif("✅ EXPORT", "Script berhasil di-export murni!")
+        else SendNotif("❌ ERROR", "Executor lu gak support writefile!") end
+    end)
 end
 
--- Export fungsi biar bisa dipake file Control & Timeline
 _G.NoxvaWalkAPI = { StopRecord = StopRecording, StartRecord = StartRecording, Play = PlayRecord }
