@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX REALTIME MODIFIER)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FULL PERFECT + REALTIME COIL)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -46,9 +46,8 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- REALTIME SPEED ENFORCER (BUAT TESTING SEBELUM RECORD!)
+-- REAL-TIME SPEED ENFORCER (AKTIFIN CUSTOM SPEED LU!)
 -- ==========================================
--- Loop ini bakal maksa nerapin Speed yang lu masukin di UI secara Real-Time!
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     -- Jangan nimpa kalo lagi bot PlayRecord (Karena pas PlayRecord pake logicnya sendiri)
@@ -75,10 +74,11 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
         targetJP = Data.CoilSettings.NormalJP
     end
 
-    -- Kalo di UI diisi angka lebih dari 0, paksa speed karakternya saat itu juga!
+    -- AKTIFIN: Kalau di UI diisi angka lebih dari 0, paksa speed karakternya saat itu juga!
     if targetWS > 0 then hum.WalkSpeed = targetWS end
     if targetJP > 0 then hum.JumpPower = targetJP end
 end)
+
 
 -- ==========================================
 -- DETEKSI TOOL (COIL) SAAT RECORD
@@ -101,7 +101,7 @@ local function AddNode(pos, isJump)
 end
 
 -- ==========================================
--- 1. FUNGSI RECORDING
+-- 1. FUNGSI RECORDING (NORMAL)
 -- ==========================================
 local function StopRecording()
     Data.IsRecording = false
@@ -174,7 +174,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. ABSOLUTE SPEED ENGINE (BACA SETTING UI LU)
+-- 2. FUNGSI PLAYBACK (FIX LOMPAT MELAYANG & SPEED COIL!)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -220,16 +220,16 @@ local function PlayRecord()
 
         local step = Data.Path[Data.CurrentNode]
         
-        -- ⚡ CEK SETTING UI LU BERDASARKAN TOOL SAAT ITU
-        local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or 16
-        local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or 50
+        -- ⚡ CEK SETTING UI LU BERDASARKAN TOOL YANG DIREKAM
+        local targetWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or humanoid.WalkSpeed
+        local targetJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or humanoid.JumpPower
         
         if step.Tool == Data.CoilSettings.Coil1Name then
-            targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or 32
-            targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or 50
+            targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or targetWS
+            targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or targetJP
         elseif step.Tool == Data.CoilSettings.Coil2Name then
-            targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or 16
-            targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or 100
+            targetWS = Data.CoilSettings.Coil2WS > 0 and Data.CoilSettings.Coil2WS or targetWS
+            targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or targetJP
         end
         
         humanoid.WalkSpeed = targetWS
@@ -247,19 +247,21 @@ local function PlayRecord()
         local yDiff = targetPos.Y - myPos.Y
 
         if dir ~= Vector3.zero then
+            -- Murni nyuruh badannya gerak ke arah tujuan
             humanoid:Move(dir, false)
-            local targetVelY = hrp.Velocity.Y
-
-            if isMidAir then
-                hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
-            else
+            
+            if not isMidAir then
+                -- KALAU DI DARAT
+                local targetVelY = hrp.Velocity.Y
                 if yDiff > 1.2 then
-                    if not isMidAir then humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                     targetVelY = math.max(targetVelY, 15) 
                 elseif yDiff < -5 and dist2D < 4 then
                     targetVelY = -60 
                 end
                 hrp.Velocity = Vector3.new(dir.X * targetWS, targetVelY, dir.Z * targetWS)
+            else
+                -- KALAU DI UDARA: BIARIN GRAVITASI KERJA (ANTI MELAYANG/TERBANG)
             end
             
             if dist2D > 0.5 then 
@@ -274,7 +276,6 @@ local function PlayRecord()
             if not isMidAir and (tick() - lastJumpTime > 0.5) then
                 humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
                 lastJumpTime = tick()
-                hrp.Velocity = Vector3.new(dir.X * (targetWS * 1.2), hrp.Velocity.Y, dir.Z * (targetWS * 1.2))
             end
         end
 
