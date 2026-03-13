@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (THE PERFECT ENGINE - NATIVE MOVETO)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V9 THE REDEMPTION ENGINE)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -17,9 +17,8 @@ _G.NoxvaWalkData.IsRecording = _G.NoxvaWalkData.IsRecording or false
 _G.NoxvaWalkData.IsPlaying = _G.NoxvaWalkData.IsPlaying or false
 _G.NoxvaWalkData.CurrentNode = _G.NoxvaWalkData.CurrentNode or 1
 _G.NoxvaWalkData.TotalRecordTime = _G.NoxvaWalkData.TotalRecordTime or 0
-_G.NoxvaWalkData.PlayThread = _G.NoxvaWalkData.PlayThread or nil
 
--- Simpen Speed Asli Bawaan Game Biar Bisa Ngerem
+-- BASE SPEED SAVER
 _G.NoxvaWalkData.BaseWS = _G.NoxvaWalkData.BaseWS or 16
 _G.NoxvaWalkData.BaseJP = _G.NoxvaWalkData.BaseJP or 50
 _G.NoxvaWalkData.BaseCaptured = _G.NoxvaWalkData.BaseCaptured or false
@@ -30,6 +29,7 @@ local ConfigFolder = "NoxvaHub/WalkRecords/" .. tostring(game.PlaceId)
 if makefolder then pcall(function() makefolder("NoxvaHub") makefolder("NoxvaHub/WalkRecords") makefolder(ConfigFolder) end) end
 
 local lastJumpTime = 0
+local stuckTimer = 0
 local lastUITick = 0 
 
 local function SendNotif(title, text)
@@ -45,7 +45,7 @@ local function UpdateInfoUI()
 end
 
 -- ==========================================
--- ⚡ MESIN SPEED REALTIME (SCANNER 24 JAM MUTLAK!) ⚡
+-- ⚡ MESIN SPEED REALTIME (100% STABIL) ⚡
 -- ==========================================
 if Data.Conns.RealtimeSpeed then Data.Conns.RealtimeSpeed:Disconnect() end
 Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
@@ -53,7 +53,6 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     local hum = char and char:FindFirstChild("Humanoid")
     if not hum then return end
 
-    -- Capture speed asli pas baru inject
     if not Data.BaseCaptured and hum.WalkSpeed > 0 then
         Data.BaseWS = hum.WalkSpeed
         Data.BaseJP = hum.JumpPower
@@ -63,14 +62,12 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
     local tool = char:FindFirstChildOfClass("Tool")
     local toolName = tool and tool.Name or "None"
 
-    -- Ambil dari UI, kalo kosong (0) balik ke setting game asli
     local defaultWS = Data.CoilSettings.NormalWS > 0 and Data.CoilSettings.NormalWS or Data.BaseWS
     local defaultJP = Data.CoilSettings.NormalJP > 0 and Data.CoilSettings.NormalJP or Data.BaseJP
 
     local targetWS = defaultWS
     local targetJP = defaultJP
 
-    -- Cocokin sama Tool yang lagi dipegang SAAT INI (Bukan dari Record)
     if toolName == Data.CoilSettings.Coil1Name then
         targetWS = Data.CoilSettings.Coil1WS > 0 and Data.CoilSettings.Coil1WS or defaultWS
         targetJP = Data.CoilSettings.Coil1JP > 0 and Data.CoilSettings.Coil1JP or defaultJP
@@ -79,20 +76,16 @@ Data.Conns.RealtimeSpeed = RunService.Heartbeat:Connect(function()
         targetJP = Data.CoilSettings.Coil2JP > 0 and Data.CoilSettings.Coil2JP or defaultJP
     end
 
-    -- Terapkan speed paksa tiap detik
     hum.WalkSpeed = targetWS
     hum.UseJumpPower = true 
     hum.JumpPower = targetJP
 end)
 
 -- ==========================================
--- 1. FUNGSI RECORDING (MURNI TITIK)
+-- FUNGSI RECORDING MURNI
 -- ==========================================
 local function AddNode(pos, isJump)
-    table.insert(Data.Path, {
-        Position = pos, 
-        IsJumpPoint = isJump
-    })
+    table.insert(Data.Path, {Position = pos, IsJumpPoint = isJump})
 end
 
 local function StopRecording()
@@ -128,9 +121,7 @@ local function StartRecording(isResume)
     end)
     
     Data.Conns.Jump = UserInputService.JumpRequest:Connect(function()
-        local state = humanoid:GetState()
-        local isGrounded = (state == Enum.HumanoidStateType.Running or state == Enum.HumanoidStateType.RunningNoPhysics or state == Enum.HumanoidStateType.Landed)
-        if Data.IsRecording and isGrounded and (tick() - lastJumpTime) > 0.5 then 
+        if Data.IsRecording and (tick() - lastJumpTime) > 0.4 then 
             lastJumpTime = tick()
             AddNode(hrp.Position, true)
             lastPos = hrp.Position
@@ -166,7 +157,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. FUNGSI PLAYBACK (NATIVE COROUTINE MOVETO - PERFECT LOGIC)
+-- 2. FUNGSI PLAYBACK (ANTI-BABLAS MATHEMATICS)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -188,65 +179,68 @@ local function PlayRecord()
         SendNotif("🚀 WALK", "Lanjut dari Titik " .. Data.CurrentNode)
     end
     
+    stuckTimer = 0
     Data.IsPlaying = true
     humanoid.AutoRotate = true 
 
-    if UI and UI.BtnPlay then 
-        UI.BtnPlay.Text = "⏹ STOP WALK"
-        UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(180, 40, 40)
-    end
-
-    -- Hapus Thread lama kalo masih ada yang jalan
-    if Data.PlayThread then task.cancel(Data.PlayThread) end
-
-    -- Bikin Thread baru buat jalanin rute tanpa ngerusak FPS
-    Data.PlayThread = task.spawn(function()
-        for i = Data.CurrentNode, #Data.Path do
-            if not Data.IsPlaying or humanoid.Health <= 0 then break end
-            
-            Data.CurrentNode = i
-            local step = Data.Path[i]
-            local targetPos = step.Position
-            
-            -- Pake Engine Bawaan Roblox! Mulus Parah Gak Akan Nyemplung
-            humanoid:MoveTo(targetPos)
-            
-            if step.IsJumpPoint then
-                humanoid.Jump = true
-            end
-            
-            local stuckTimer = 0
-            while Data.IsPlaying and humanoid.Health > 0 do
-                local dt = RunService.Heartbeat:Wait()
-                stuckTimer = stuckTimer + dt
-                
-                -- Hitung jarak ke titik (Pake 2D biar di tangga gak error)
-                local currentPos = hrp.Position
-                local dist2D = (Vector3.new(currentPos.X, targetPos.Y, currentPos.Z) - targetPos).Magnitude
-                
-                -- Toleransi fix, aman buat segala jenis speed
-                if dist2D <= 3.5 then
-                    break -- Titik tercapai! Lanjut ke node berikutnya
-                end
-                
-                -- Kalau udah kelamaan (nyangkut), paksa teleport ke titik itu
-                if stuckTimer > 1.5 then
-                    hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2.5, 0))
-                    hrp.Velocity = Vector3.zero
-                    break
-                end
-            end
+    if Data.Conns.Play then Data.Conns.Play:Disconnect() end
+    
+    Data.Conns.Play = RunService.Heartbeat:Connect(function(dt)
+        if not Data.IsPlaying or humanoid.Health <= 0 then
+            Data.IsPlaying = false
+            if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
         
-        -- Kalo udah nyampe akhir rute
-        if Data.IsPlaying then
-            Data.IsPlaying = false
-            SendNotif("🏁 SELESAI", "Auto Walk Selesai!")
-            if UI and UI.BtnPlay then 
-                UI.BtnPlay.Text = "▶ PLAY"
-                UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90) 
+        if Data.CurrentNode > #Data.Path then
+            Data.IsPlaying = false; SendNotif("🏁 SELESAI", "Auto Walk Selesai!")
+            if UI and UI.BtnPlay then UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90) end
+            humanoid:Move(Vector3.zero, false)
+            if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
+        end
+
+        local step = Data.Path[Data.CurrentNode]
+        local targetPos = step.Position
+        local myPos = hrp.Position
+        
+        -- Kalkulasi Jarak Murni 2D (Abaikan Y biar gak kebingungan di tangga)
+        local dist2D = (Vector3.new(targetPos.X, 0, targetPos.Z) - Vector3.new(myPos.X, 0, myPos.Z)).Magnitude
+        
+        -- [RUMUS ANTI-BABLAS]
+        -- Toleransi dinamis berdasarkan jarak yang ditempuh bot dalam 2 frame ke depan!
+        local currentWS = humanoid.WalkSpeed
+        local tolerance = math.max(2.5, currentWS * dt * 1.5)
+
+        -- TRIGGER LOMPAT DARI RECORD
+        if step.IsJumpPoint and dist2D <= (tolerance + 2.0) then 
+            if (tick() - lastJumpTime > 0.3) then
+                humanoid.Jump = true
+                lastJumpTime = tick()
             end
-            humanoid:MoveTo(hrp.Position) -- Stop jalan
+        end
+
+        -- KALO UDAH MASUK RADIUS (GAK BAKAL OVERSHOOT LAGI)
+        if dist2D <= tolerance then
+            Data.CurrentNode = Data.CurrentNode + 1
+            stuckTimer = 0
+            return
+        end
+
+        -- JALAN MURNI PAKE ROBLOX NATIVE
+        local dir = (Vector3.new(targetPos.X, myPos.Y, targetPos.Z) - myPos).Unit
+        humanoid:Move(dir, false)
+
+        -- AUTO LOMPAT KALO TITIK BERIKUTNYA LEBIH TINGGI (TANGGA/OBJEK)
+        if targetPos.Y - myPos.Y > 1.5 and dist2D < 5 then
+            humanoid.Jump = true
+        end
+
+        -- STUCK HANDLER (Kalo nabrak tembok atau jatuh)
+        stuckTimer = stuckTimer + dt
+        if stuckTimer > 1.5 then 
+            -- Culik paksa ke titik tujuan kalo beneran macet
+            hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2.5, 0))
+            Data.CurrentNode = Data.CurrentNode + 1
+            stuckTimer = 0
         end
     end)
 end
@@ -261,20 +255,9 @@ if UI and UI.BtnRecord then
     
     UI.BtnPlay.MouseButton1Click:Connect(function()
         if Data.IsRecording then StopRecording(); UI.BtnRecord.Text = "⏺ RECORD" end
-        if Data.IsPlaying then
-            -- Kalau lagi Play terus distop manual
-            Data.IsPlaying = false
-            if Data.PlayThread then task.cancel(Data.PlayThread) end
-            local char = player.Character
-            if char and char:FindFirstChild("Humanoid") then
-                char.Humanoid:MoveTo(char.HumanoidRootPart.Position)
-            end
-            UI.BtnPlay.Text = "▶ PLAY"
-            UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90)
-        else
-            -- Mulai Play
-            PlayRecord()
-        end
+        Data.IsPlaying = not Data.IsPlaying
+        if Data.IsPlaying then UI.BtnPlay.Text = "⏹ STOP WALK"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(180, 40, 40); PlayRecord()
+        else UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90); if Data.Conns.Play then Data.Conns.Play:Disconnect() end; local char = player.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false); char.Humanoid.AutoRotate = true end end 
     end)
 
     UI.BtnSave.MouseButton1Click:Connect(function() 
