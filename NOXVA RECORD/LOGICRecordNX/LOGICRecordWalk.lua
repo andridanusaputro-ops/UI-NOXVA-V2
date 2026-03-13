@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX GRAVITY)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX JUMP & PHYSICS)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -65,7 +65,8 @@ local function StartRecording(isResume)
         UpdateInfoUI()
         SendNotif("🔴 RECORD", "Recording Dimulai!") 
     else 
-        SendNotif("🔴 RECORD", "Resume Recording!") 
+        -- Kalau resume, gak usah clear table, lanjutt!
+        SendNotif("🔴 RECORD", "Resume Recording Aktif!") 
     end
     
     Data.IsRecording = true
@@ -112,7 +113,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. ABSOLUTE SPEED ENGINE (FIX GRAVITY/FLY BUG)
+-- 2. ABSOLUTE SPEED ENGINE (FIX JUMP PHYSICS)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -140,7 +141,6 @@ local function PlayRecord()
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
-    -- FIX V6: Pakai Heartbeat (Setelah Physics) biar Y Velocity murni dari Gravitasi
     Data.Conns.Play = RunService.Heartbeat:Connect(function(dt)
         if not Data.IsPlaying or humanoid.Health <= 0 then
             Data.IsPlaying = false
@@ -171,21 +171,23 @@ local function PlayRecord()
 
         if dir ~= Vector3.zero then
             humanoid:Move(dir, false)
-            
-            -- FIX V6 GRAVITY: Jangan ubah Y Velocity kecuali butuh (Biar gak melayang)
             local targetVelY = hrp.Velocity.Y
 
-            if yDiff > 1.2 then
-                if state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.Freefall and state ~= Enum.HumanoidStateType.Climbing then humanoid.Jump = true end
-                targetVelY = math.max(targetVelY, 15) 
-            elseif yDiff < -5 and dist2D < 4 then
-                targetVelY = -60 
+            -- FIX V6 JUMP: Kalau lagi di udara, lepasin Y Velocity biar gravitasi yg kerja (Pendaratan Akurat)
+            if state == Enum.HumanoidStateType.Jumping or state == Enum.HumanoidStateType.Freefall then
+                hrp.Velocity = Vector3.new(dir.X * currentSpeed, targetVelY, dir.Z * currentSpeed)
+            else
+                -- Kalau lagi di darat, baru mainin Y Velocity buat tangga & turunan
+                if yDiff > 1.2 then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    targetVelY = math.max(targetVelY, 15) 
+                elseif yDiff < -5 and dist2D < 4 then
+                    targetVelY = -60 
+                end
+                hrp.Velocity = Vector3.new(dir.X * currentSpeed, targetVelY, dir.Z * currentSpeed)
             end
-
-            -- Terapkan X dan Z, biarkan gravitasi ngurusin Y
-            hrp.Velocity = Vector3.new(dir.X * currentSpeed, targetVelY, dir.Z * currentSpeed)
             
-            -- FIX FLOATY CFRAME:
+            -- FIX ROTASI
             if dist2D > 0.5 then 
                 local freshPos = hrp.Position
                 hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
@@ -194,7 +196,10 @@ local function PlayRecord()
 
         local tolerance = (step.IsJumpPoint) and 2.5 or 2.0
         if dist2D < tolerance then
-            if step.IsJumpPoint then humanoid.Jump = true end
+            -- FIX V6 ANIMASI LOMPAT: Pake ChangeState biar animasi bawaan roblox ke-trigger!
+            if step.IsJumpPoint then 
+                humanoid:ChangeState(Enum.HumanoidStateType.Jumping) 
+            end
             Data.CurrentNode = Data.CurrentNode + 1
             stuckTimer = 0
         end
