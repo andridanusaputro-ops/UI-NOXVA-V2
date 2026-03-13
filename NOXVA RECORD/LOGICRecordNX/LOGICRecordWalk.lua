@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V6 ENGINE FIX GRAVITY)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -32,7 +32,7 @@ local function SendNotif(title, text)
 end
 
 -- ==========================================
--- UI UPDATER (FIX BUG TEXT INFO)
+-- UI UPDATER
 -- ==========================================
 local function UpdateInfoUI()
     if UI and UI.InfoLabel then
@@ -112,7 +112,7 @@ local function StartRecording(isResume)
 end
 
 -- ==========================================
--- 2. ABSOLUTE SPEED ENGINE (FIX STUTTERING)
+-- 2. ABSOLUTE SPEED ENGINE (FIX GRAVITY/FLY BUG)
 -- ==========================================
 local function PlayRecord()
     if #Data.Path == 0 then SendNotif("⚠️ ERROR", "Rute Kosong!"); return end
@@ -136,16 +136,15 @@ local function PlayRecord()
     
     stuckTimer = 0
     Data.IsPlaying = true
-    
-    -- FIX STUTTERING: Matiin rotasi bawaan roblox biar gak berantem sama CFrame kita
     humanoid.AutoRotate = false 
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
-    Data.Conns.Play = RunService.Stepped:Connect(function(time, dt)
+    -- FIX V6: Pakai Heartbeat (Setelah Physics) biar Y Velocity murni dari Gravitasi
+    Data.Conns.Play = RunService.Heartbeat:Connect(function(dt)
         if not Data.IsPlaying or humanoid.Health <= 0 then
             Data.IsPlaying = false
-            humanoid.AutoRotate = true -- Nyalain lagi rotasinya
+            humanoid.AutoRotate = true 
             if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
         
@@ -154,7 +153,7 @@ local function PlayRecord()
             if UI and UI.BtnPlay then UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90) end
             humanoid:Move(Vector3.zero, false)
             hrp.Velocity = Vector3.zero
-            humanoid.AutoRotate = true -- Nyalain lagi
+            humanoid.AutoRotate = true 
             if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
         end
 
@@ -172,21 +171,25 @@ local function PlayRecord()
 
         if dir ~= Vector3.zero then
             humanoid:Move(dir, false)
-            local velX, velZ, velY = dir.X * currentSpeed, dir.Z * currentSpeed, hrp.Velocity.Y
+            
+            -- FIX V6 GRAVITY: Jangan ubah Y Velocity kecuali butuh (Biar gak melayang)
+            local targetVelY = hrp.Velocity.Y
 
-            -- FIX V6: Nanjak (Tangga Melayang)
             if yDiff > 1.2 then
                 if state ~= Enum.HumanoidStateType.Jumping and state ~= Enum.HumanoidStateType.Freefall and state ~= Enum.HumanoidStateType.Climbing then humanoid.Jump = true end
-                velY = math.max(velY, 15) 
+                targetVelY = math.max(targetVelY, 15) 
+            elseif yDiff < -5 and dist2D < 4 then
+                targetVelY = -60 
             end
 
-            -- FIX V6: Drop Anchor (Turun Curam)
-            if yDiff < -5 and dist2D < 4 then
-                velX, velZ, velY = dir.X * 5, dir.Z * 5, -60 
+            -- Terapkan X dan Z, biarkan gravitasi ngurusin Y
+            hrp.Velocity = Vector3.new(dir.X * currentSpeed, targetVelY, dir.Z * currentSpeed)
+            
+            -- FIX FLOATY CFRAME:
+            if dist2D > 0.5 then 
+                local freshPos = hrp.Position
+                hrp.CFrame = CFrame.lookAt(freshPos, Vector3.new(targetPos.X, freshPos.Y, targetPos.Z)) 
             end
-
-            hrp.Velocity = Vector3.new(velX, velY, velZ)
-            if dist2D > 0.5 then hrp.CFrame = CFrame.lookAt(myPos, Vector3.new(targetPos.X, myPos.Y, targetPos.Z)) end
         end
 
         local tolerance = (step.IsJumpPoint) and 2.5 or 2.0
@@ -196,7 +199,6 @@ local function PlayRecord()
             stuckTimer = 0
         end
 
-        -- STUCK HANDLER
         stuckTimer = stuckTimer + dt
         if stuckTimer > 1.2 then 
             hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 2, 0))
