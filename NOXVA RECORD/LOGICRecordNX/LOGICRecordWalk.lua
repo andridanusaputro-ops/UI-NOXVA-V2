@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | PURE LOGIC RECORD WALK (V15 FINAL - ANTI-SPAM FRAME & REWIND FEATURE)
+-- NOXVA HUB | PURE LOGIC RECORD WALK (V16 FINAL - BRUTE FORCE SPEED & STEPPED PLAYBACK)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 local UI = _G.NoxvaWalkUI
@@ -42,7 +42,6 @@ end
 -- ==========================================
 -- 1. FUNGSI RECORDING (MURNI & SENSITIF)
 -- ==========================================
--- FIX: Tambahin parameter waktu (recTime) buat fitur Rewind
 local function AddNode(pos, isJump, walkSpeed, recTime)
     table.insert(Data.Path, {
         Position = pos, 
@@ -113,11 +112,9 @@ local function StartRecording(isResume)
         local lastNodeTime = (#Data.Path > 0) and Data.Path[#Data.Path].Time or 0
         local timePassed = Data.TotalRecordTime - lastNodeTime
         
-        -- FIX V15: Dynamic Gap + Time Throttle (Anti-Spam Frame)
         local recordGap = math.max(4.0, humanoid.WalkSpeed * 0.15)
         local dist = (hrp.Position - lastPos).Magnitude
         
-        -- Cuma rekam kalau jeda waktu > 0.15 detik biar engine gak patah-patah ngitung arah
         if dist > recordGap and timePassed > 0.15 then
             AddNode(hrp.Position, false, humanoid.WalkSpeed, Data.TotalRecordTime)
             lastPos = hrp.Position
@@ -125,7 +122,6 @@ local function StartRecording(isResume)
     end)
 end
 
--- FITUR BARU: REWIND (Potong Rute)
 local function RewindRecord(secondsToRewind)
     if not Data.IsRecording or #Data.Path == 0 then 
         SendNotif("⚠️ REWIND", "Harus lagi nge-record buat potong rute!")
@@ -171,7 +167,8 @@ local function PlayRecord()
 
     if Data.Conns.Play then Data.Conns.Play:Disconnect() end
     
-    Data.Conns.Play = RunService.Heartbeat:Connect(function(dt)
+    -- FIX V16: Dipindah ke Stepped (Jalan sebelum physics) biar menang telak lawan script game
+    Data.Conns.Play = RunService.Stepped:Connect(function(time, dt)
         if not Data.IsPlaying or humanoid.Health <= 0 then
             Data.IsPlaying = false
             if Data.Conns.Play then Data.Conns.Play:Disconnect() end; return
@@ -186,7 +183,8 @@ local function PlayRecord()
 
         local step = Data.Path[Data.CurrentNode]
         
-        if step.Speed and step.Speed > 16 and humanoid.WalkSpeed < step.Speed then 
+        -- FIX V16: BRUTE FORCE SPEED! Timpa terus apapun yang terjadi
+        if step.Speed then 
             humanoid.WalkSpeed = step.Speed 
         end
         
@@ -284,10 +282,9 @@ if UI and UI.BtnRecord then
         else UI.BtnPlay.Text = "▶ PLAY"; UI.BtnPlay.BackgroundColor3 = Color3.fromRGB(40, 200, 90); if Data.Conns.Play then Data.Conns.Play:Disconnect() end; local char = player.Character if char and char:FindFirstChild("Humanoid") then char.Humanoid:Move(Vector3.zero, false); char.Humanoid.AutoRotate = true end end 
     end)
     
-    -- Binding Tombol Rewind/Potong Rute (Asumsi nama UI button-nya BtnRewind)
     if UI.BtnRewind then
         UI.BtnRewind.MouseButton1Click:Connect(function()
-            RewindRecord(3) -- Potong 3 detik ke belakang
+            RewindRecord(3) 
         end)
     end
 
