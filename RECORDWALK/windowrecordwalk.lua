@@ -1,5 +1,5 @@
 -- ==========================================
--- NOXVA HUB | RECORD WALK - PURE OVERLAY (RGB & SAKLAR VIP)
+-- NOXVA HUB | RECORD WALK - PURE OVERLAY (SOLID COLOR & SAKLAR VIP)
 -- DEVELOPED BY DANZY (WIB / KEBUMEN)
 -- ==========================================
 
@@ -7,7 +7,6 @@ local CoreGui = game:GetService("CoreGui")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 
 -- 1. LOAD UI UTAMA LU DULU
 local NoxvaLib = _G.NoxvaLib or loadstring(game:HttpGet("https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/main/uiNoxvaV2.lua"))()
@@ -42,7 +41,6 @@ if MainFrame then MainFrame.Visible = false end
 -- ==========================================
 _G.NoxvaWalkUI = _G.NoxvaWalkUI or {}
 _G.NoxvaWalkUI.State = { VIP = true, Ctrl = false, File = false }
-local RGBStrokes = {} -- Buat nampung garis yang mau diwarnain pelangi
 
 -- ==========================================
 -- FUNGSI NOTIFIKASI ALA NOXVA
@@ -53,8 +51,10 @@ local function SendNoxvaNotif(Title, Text)
     NotifFrame.Size = UDim2.new(1, 0, 0, 60); NotifFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25); NotifFrame.BackgroundTransparency = 0.1
     NotifFrame.Position = UDim2.new(1, 300, 0, 0)
     Instance.new("UICorner", NotifFrame).CornerRadius = UDim.new(0, 5)
-    local NStroke = Instance.new("UIStroke", NotifFrame); NStroke.Thickness = 1.5
-    table.insert(RGBStrokes, NStroke) -- Masukin ke efek pelangi
+    
+    local NStroke = Instance.new("UIStroke", NotifFrame)
+    NStroke.Thickness = 1.5
+    NStroke.Color = Color3.fromRGB(150, 255, 100) -- Warna hijau stabilo solid
 
     local NotifTitle = Instance.new("TextLabel", NotifFrame)
     NotifTitle.Size = UDim2.new(1, -20, 0, 20); NotifTitle.Position = UDim2.new(0, 10, 0, 5); NotifTitle.BackgroundTransparency = 1; NotifTitle.Text = Title
@@ -103,8 +103,9 @@ local function CreatePanel(Name, TitleText, Pos, SizeX, isMasterPanel)
     Panel.BackgroundColor3 = Color3.fromRGB(15, 15, 15); Panel.BackgroundTransparency = 0.2; Panel.Visible = false 
     Instance.new("UICorner", Panel).CornerRadius = UDim.new(0, 10)
     
-    local Stroke = Instance.new("UIStroke", Panel); Stroke.Thickness = 1.5
-    table.insert(RGBStrokes, Stroke) -- Bikin frame ini RGB kelap-kelip
+    local Stroke = Instance.new("UIStroke", Panel)
+    Stroke.Thickness = 1.5
+    Stroke.Color = Color3.fromRGB(150, 255, 100) -- Warna outline statis
 
     local TopBar = Instance.new("Frame", Panel); TopBar.Size = UDim2.new(1, 0, 0, 25); TopBar.BackgroundTransparency = 1
     MakeDraggable(Panel, TopBar)
@@ -238,17 +239,12 @@ function _G.NoxvaWalkUI.PopulateDropdown(fileList)
             P_Ctrl.Visible = true
             SendNoxvaNotif("FILE MANAGER", "Rute " .. fileName .. " siap di-play!")
             
-            -- Nanti di backend filemanager.lua, lu tambahin logic load data json-nya disini
             if _G.LoadRouteAction then _G.LoadRouteAction(fileName) end 
         end)
         ySize = ySize + 25
     end
     SavedFilesDropdown.Container.CanvasSize = UDim2.new(0, 0, 0, ySize)
 end
-
--- Dummy data buat ngetes tampilan dropdown
-_G.NoxvaWalkUI.PopulateDropdown({"Rute_Pvp", "SaveWalk1", "SaveWalk2"})
-
 
 -- ==========================================
 -- INTERAKSI TOMBOL SAKLAR DI NOXVAWALK VIP
@@ -276,7 +272,6 @@ _G.NoxvaWalkUI.BtnClear.MouseButton1Click:Connect(function()
     P_Ctrl.Visible = false
     SendNoxvaNotif("NOXVA CLEAR", "Tab disembunyikan & Memori di-reset!")
 end)
-
 
 -- ==========================================
 -- LOGIC MINIMIZE (-) & CLOSE (X) DI NOXVAWALK VIP
@@ -313,17 +308,6 @@ VIP_CloseBtn.MouseButton1Click:Connect(function()
         TweenService:Create(ConfirmOverlay, TweenInfo.new(0.2), {BackgroundTransparency = 0.5}):Play()
     else
         NoxvaUI:Destroy()
-    end
-end)
-
--- ==========================================
--- RGB CHROMA LOOP (UNTUK FRAME)
--- ==========================================
-RunService.RenderStepped:Connect(function()
-    local hue = tick() % 5 / 5
-    local rgbColor = Color3.fromHSV(hue, 1, 1)
-    for _, stroke in ipairs(RGBStrokes) do
-        stroke.Color = rgbColor
     end
 end)
 
