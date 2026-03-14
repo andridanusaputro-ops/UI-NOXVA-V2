@@ -8,8 +8,9 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 
--- 1. LOAD UI UTAMA LU DULU
-local NoxvaLib = _G.NoxvaLib or loadstring(game:HttpGet("https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/main/uiNoxvaV2.lua"))()
+-- 1. LOAD UI UTAMA LU DULU & BIKIN JENDELANYA (Ini yang tadi kehapus cok!)
+local NoxvaLib = _G.NoxvaLib or loadstring(game:HttpGet("https://raw.githubusercontent.com/andridanusaputro-ops/UI-NOXVA-V2/refs/heads/main/uiNoxvaV2.lua"))()
+local Window = NoxvaLib:CreateWindow("NOXVA", Color3.fromRGB(0, 120, 255))
 
 local successHui, hui = pcall(function() return gethui() end)
 local targetParent = hui or CoreGui or (Players.LocalPlayer and Players.LocalPlayer:FindFirstChild("PlayerGui"))
@@ -54,7 +55,7 @@ local function SendNoxvaNotif(Title, Text)
     
     local NStroke = Instance.new("UIStroke", NotifFrame)
     NStroke.Thickness = 1.5
-    NStroke.Color = Color3.fromRGB(150, 255, 100) -- Warna hijau stabilo solid
+    NStroke.Color = Color3.fromRGB(150, 255, 100)
 
     local NotifTitle = Instance.new("TextLabel", NotifFrame)
     NotifTitle.Size = UDim2.new(1, -20, 0, 20); NotifTitle.Position = UDim2.new(0, 10, 0, 5); NotifTitle.BackgroundTransparency = 1; NotifTitle.Text = Title
@@ -105,7 +106,7 @@ local function CreatePanel(Name, TitleText, Pos, SizeX, isMasterPanel)
     
     local Stroke = Instance.new("UIStroke", Panel)
     Stroke.Thickness = 1.5
-    Stroke.Color = Color3.fromRGB(150, 255, 100) -- Warna outline statis
+    Stroke.Color = Color3.fromRGB(150, 255, 100) 
 
     local TopBar = Instance.new("Frame", Panel); TopBar.Size = UDim2.new(1, 0, 0, 25); TopBar.BackgroundTransparency = 1
     MakeDraggable(Panel, TopBar)
@@ -172,7 +173,6 @@ end
 -- ==========================================
 local P_VIP, C_VIP, VIP_CloseBtn, VIP_MinBtn = CreatePanel("Widget_VIP", "NOXVAWALK VIP", UDim2.new(0.05, 0, 0.3, 0), 200, true)
 
--- Teks Besar Berubah-ubah
 local StatusTxt = Instance.new("TextLabel", C_VIP)
 StatusTxt.Size = UDim2.new(1, 0, 0, 30); StatusTxt.BackgroundTransparency = 1; StatusTxt.Text = "CP 0"; StatusTxt.TextColor3 = Color3.fromRGB(100, 200, 255); StatusTxt.Font = Enum.Font.GothamBlack; StatusTxt.TextSize = 22
 _G.NoxvaWalkUI.StatusLabel = StatusTxt
@@ -208,7 +208,6 @@ _G.NoxvaWalkUI.InfoLabel = InfoTxt
 -- ==========================================
 local P_File, C_File = CreatePanel("Widget_File", "FILE MANAGER", UDim2.new(0.4, 0, 0.4, 0), 180, false)
 
--- TextBox buat Save Baru
 local FileNameInput = Instance.new("TextBox", C_File)
 FileNameInput.Size = UDim2.new(0, 150, 0, 30); FileNameInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30); FileNameInput.Text = "Nama_Rute"; FileNameInput.TextColor3 = Color3.fromRGB(255, 255, 255); FileNameInput.Font = Enum.Font.Gotham; FileNameInput.TextSize = 12
 Instance.new("UICorner", FileNameInput).CornerRadius = UDim.new(0, 5)
@@ -217,39 +216,33 @@ _G.NoxvaWalkUI.InputFileName = FileNameInput
 local RowF1 = CreateRow(C_File)
 _G.NoxvaWalkUI.BtnSave = C_Btn(RowF1, "💾 SAVE", 150, Color3.fromRGB(40, 180, 80))
 
--- Dropdown Daftar Save
 local SavedFilesDropdown = CreateDropdown(C_File, "Pilih Rute Load...")
 _G.NoxvaWalkUI.DropdownAPI = SavedFilesDropdown
 
--- LOGIC UI DROPDOWN: Kalo dipilih, langsung buka NOXVAWALK CONTROL
 function _G.NoxvaWalkUI.PopulateDropdown(fileList)
     for _, v in pairs(SavedFilesDropdown.Container:GetChildren()) do
         if v:IsA("TextButton") then v:Destroy() end
     end
-    
     local ySize = 0
     for _, fileName in ipairs(fileList) do
         local btn = Instance.new("TextButton", SavedFilesDropdown.Container)
         btn.Size = UDim2.new(1, 0, 0, 25); btn.BackgroundTransparency = 1; btn.Text = fileName; btn.TextColor3 = Color3.fromRGB(200,200,200); btn.Font = Enum.Font.Gotham; btn.TextSize = 11
-        
         btn.MouseButton1Click:Connect(function()
             SavedFilesDropdown.Btn.Text = fileName .. " ▼"
-            SavedFilesDropdown.MainFrame.Size = UDim2.new(0, 150, 0, 30) -- Tutup dropdown
-            -- Otomatis Buka Control Panel
+            SavedFilesDropdown.MainFrame.Size = UDim2.new(0, 150, 0, 30) 
             P_Ctrl.Visible = true
             SendNoxvaNotif("FILE MANAGER", "Rute " .. fileName .. " siap di-play!")
-            
             if _G.LoadRouteAction then _G.LoadRouteAction(fileName) end 
         end)
         ySize = ySize + 25
     end
     SavedFilesDropdown.Container.CanvasSize = UDim2.new(0, 0, 0, ySize)
 end
+_G.NoxvaWalkUI.PopulateDropdown({"Rute_Pvp", "SaveWalk1", "SaveWalk2"})
 
 -- ==========================================
 -- INTERAKSI TOMBOL SAKLAR DI NOXVAWALK VIP
 -- ==========================================
-
 _G.NoxvaWalkUI.BtnSet.MouseButton1Click:Connect(function()
     UpdateBigText("RECORDING")
     SendNoxvaNotif("NOXVA RECORD", "Memulai perekaman jalur...")
@@ -267,7 +260,6 @@ end)
 
 _G.NoxvaWalkUI.BtnClear.MouseButton1Click:Connect(function()
     UpdateBigText("CLEAR")
-    -- Sembunyiin semua kecuali VIP
     P_File.Visible = false
     P_Ctrl.Visible = false
     SendNoxvaNotif("NOXVA CLEAR", "Tab disembunyikan & Memori di-reset!")
